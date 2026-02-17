@@ -1,0 +1,9 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand-pink: #ec4899;
+}
+
+body {
+  @apply antialiased text-slate-900 bg-white;
+}
