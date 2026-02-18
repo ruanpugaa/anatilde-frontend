@@ -13,7 +13,7 @@ export const Newsletter = () => {
 
         try {
             // Ajuste a URL para o IP/Domínio onde sua API Node está rodando
-            await axios.post('http://127.0.0.1:3001/newsletter', formData);
+            await axios.post('https://anatilde.com.br/api/newsletter.php', formData);
             setStatus('success');
             setFormData({ name: '', email: '' });
         } catch (err) {
