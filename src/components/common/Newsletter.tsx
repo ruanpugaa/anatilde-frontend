@@ -1,75 +1,101 @@
 import { useState } from 'react';
-import { motion } from 'framer-motion';
-import axios from 'axios';
-import { Send } from 'lucide-react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { motion, AnimatePresence } from 'framer-motion';
+import { newsletterService, newsletterSchema, NewsletterData } from '../../services/newsletterService';
+import { Send, CheckCircle2, AlertCircle } from 'lucide-react';
 
 export const Newsletter = () => {
-    const [formData, setFormData] = useState({ name: '', email: '' });
     const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setStatus('loading');
+    const {
+        register,
+        handleSubmit,
+        reset,
+        formState: { errors }
+    } = useForm<NewsletterData>({
+        resolver: zodResolver(newsletterSchema)
+    });
 
+    const onSubmit = async (data: NewsletterData) => {
+        setStatus('loading');
         try {
-            // Ajuste a URL para o IP/Domínio onde sua API Node está rodando
-            await axios.post('https://anatilde.com.br/api/newsletter.php', formData);
+            await newsletterService.subscribe(data);
             setStatus('success');
-            setFormData({ name: '', email: '' });
+            reset();
         } catch (err) {
             setStatus('error');
         }
     };
 
     return (
-        <section className="bg-pink-50 py-20 px-4">
-            <div className="max-w-4xl mx-auto text-center">
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                >
-                    <h2 className="text-3xl md:text-4xl font-bold text-gray-800 mb-4">
-                        Adoce sua caixa de entrada ✉️
-                    </h2>
-                    <p className="text-gray-600 mb-8 text-lg">
-                        Receba promoções exclusivas e o nosso cardápio semanal em primeira mão.
-                    </p>
+        <section className="py-24 px-6 bg-white border-t border-stone-100">
+            <div className="max-w-[1200px] mx-auto">
+                <div className="flex flex-col lg:flex-row items-center justify-between gap-12 lg:gap-20">
+                    
+                    <motion.div className="max-w-md text-center lg:text-left">
+                        <span className="text-pink-500 font-bold text-[9px] uppercase tracking-[0.4em] mb-4 block">Mailing List</span>
+                        <h2 className="text-3xl md:text-4xl font-serif italic text-stone-800 leading-tight mb-4">
+                            Mantenha-se <span className="text-stone-400 not-italic font-sans font-light">inspirada</span>
+                        </h2>
+                        <p className="text-stone-500 text-sm leading-relaxed tracking-wide">
+                            Assine para receber convites exclusivos e lançamentos sazonais.
+                        </p>
+                    </motion.div>
 
-                    {status === 'success' ? (
-                        <motion.div initial={{ scale: 0.8 }} animate={{ scale: 1 }} className="p-6 bg-green-100 text-green-700 rounded-2xl font-bold">
-                            🎉 Tudo certo! Agora você faz parte da nossa lista VIP.
-                        </motion.div>
-                    ) : (
-                        <form onSubmit={handleSubmit} className="flex flex-col md:flex-row gap-4">
-                            <input
-                                required
-                                type="text"
-                                placeholder="Seu nome"
-                                value={formData.name}
-                                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                className="flex-1 px-6 py-4 rounded-full border-none shadow-sm focus:ring-2 focus:ring-pink-500 outline-none"
-                            />
-                            <input
-                                required
-                                type="email"
-                                placeholder="Seu melhor e-mail"
-                                value={formData.email}
-                                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                                className="flex-1 px-6 py-4 rounded-full border-none shadow-sm focus:ring-2 focus:ring-pink-500 outline-none"
-                            />
-                            <button
-                                disabled={status === 'loading'}
-                                className="bg-pink-500 hover:bg-pink-600 text-white px-10 py-4 rounded-full font-bold transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-                            >
-                                {status === 'loading' ? 'Enviando...' : (
-                                    <>Cadastrar <Send size={18} /></>
-                                )}
-                            </button>
-                        </form>
-                    )}
-                    {status === 'error' && <p className="text-red-500 mt-4">Ops! Algo deu errado ou este e-mail já existe.</p>}
-                </motion.div>
+                    <div className="w-full lg:max-w-2xl">
+                        {status === 'success' ? (
+                            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-4 p-6 bg-stone-50 rounded-2xl border border-stone-100">
+                                <CheckCircle2 className="text-pink-500" size={20} />
+                                <p className="text-stone-800 font-serif italic text-sm">Sua presença foi confirmada.</p>
+                            </motion.div>
+                        ) : (
+                            <form onSubmit={handleSubmit(onSubmit)} className="space-y-2">
+                                <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-3">
+                                    {/* Nome */}
+                                    <div className="relative">
+                                        <input
+                                            {...register("name")}
+                                            placeholder="Seu nome"
+                                            className={`w-full bg-stone-50 px-6 py-4 rounded-full border ${errors.name ? 'border-red-200' : 'border-stone-100'} outline-none text-sm transition-all`}
+                                        />
+                                    </div>
+
+                                    {/* Email */}
+                                    <div className="relative">
+                                        <input
+                                            {...register("email")}
+                                            placeholder="E-mail"
+                                            className={`w-full bg-stone-50 px-6 py-4 rounded-full border ${errors.email ? 'border-red-200' : 'border-stone-100'} outline-none text-sm transition-all`}
+                                        />
+                                    </div>
+
+                                    <button
+                                        disabled={status === 'loading'}
+                                        className="bg-stone-900 hover:bg-stone-800 text-white px-8 py-4 rounded-full text-[10px] font-bold tracking-widest uppercase transition-all flex items-center justify-center gap-2 group h-full"
+                                    >
+                                        {status === 'loading' ? '...' : <>Participar <Send size={14} /></>}
+                                    </button>
+                                </div>
+
+                                {/* Mensagens de Erro Inteligentes */}
+                                <AnimatePresence mode="wait">
+                                    {(errors.name || errors.email || status === 'error') && (
+                                        <motion.div 
+                                            initial={{ opacity: 0, y: -5 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            exit={{ opacity: 0 }}
+                                            className="flex items-center gap-2 mt-2 ml-4 text-[10px] font-bold text-red-400 uppercase tracking-tighter"
+                                        >
+                                            <AlertCircle size={12} />
+                                            <span>{errors.name?.message || errors.email?.message || "Erro na conexão"}</span>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+                            </form>
+                        )}
+                    </div>
+                </div>
             </div>
         </section>
     );

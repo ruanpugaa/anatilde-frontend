@@ -24,9 +24,10 @@ export const Header = () => {
             <nav className="hidden md:flex flex-[2] justify-center gap-8 font-medium text-gray-700">
                 {/* Trocamos 'href' por 'to' e 'a' por 'Link' */}
                 <Link to="/" className="hover:text-pink-500 transition">Home</Link>
-                <Link to="/sabores" className="hover:text-pink-500 transition">Sabores</Link>
-                <Link to="/pascoa" className="hover:text-pink-500 transition">Páscoa</Link>
+                <Link to="/delicias" className="hover:text-pink-500 transition">Delícias</Link>
+                <Link to="/pascoa" className="hover:text-pink-500 transition">Páscoa 2026</Link>
                 <Link to="/quem-somos" className="hover:text-pink-500 transition">Quem Somos</Link>
+                <Link to="/contato" className="hover:text-pink-500 transition">Contato</Link>
             </nav>
 
             <div className="flex-1 flex justify-end">

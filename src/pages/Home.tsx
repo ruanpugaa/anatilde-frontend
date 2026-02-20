@@ -1,18 +1,38 @@
+import { useEffect, useState } from 'react';
 import { HeroSlider } from '../components/home/HeroSlider';
-import { Marquee } from '../components/common/Marquee';
-import { CategoryGrid } from '../components/home/CategoryGrid';
+import { BrandMarquee } from '../components/home/BrandMarquee';
+import { ProductShelf } from '../components/home/ProductShelf';
+import { CategoryScroll } from '../components/home/CategoryScroll';
+import { Product } from '../@types/product';
+import { productService } from '../services/productService';
 import { Newsletter } from '../components/common/Newsletter';
 
 export const Home = () => {
+    const [products, setProducts] = useState<Product[]>([]);
+
+    useEffect(() => {
+        productService.getAllActive().then(setProducts);
+    }, []);
+
     return (
-        <main className="min-h-screen pt-20">
+        <div className="bg-[#FFFCFB] w-full">
+            {/* 1. Header Dinâmico */}
             <HeroSlider />
-            <Marquee />
-            <section className="container mx-auto px-4 py-16">
-                <h2 className="text-3xl font-bold mb-8 text-gray-800">Explore Nossas Delícias</h2>
-                <CategoryGrid />
-            </section>
+            
+            {/* 2. Prova Social / Autoridade */}
+            <BrandMarquee />
+
+            {/* 3. Conversão Direta (Mais Vendidos) */}
+            <ProductShelf 
+                title="Mais Vendidos" 
+                subtitle="Favoritos" 
+                products={products} 
+            />
+
+            {/* 4. Navegação por Experiência (Categorias) */}
+            <CategoryScroll />
+
             <Newsletter />
-        </main>
+        </div>
     );
 };

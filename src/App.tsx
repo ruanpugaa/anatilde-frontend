@@ -4,7 +4,11 @@ import { Header } from './components/layout/Header';
 import { Sidebar } from './components/layout/Sidebar';
 import { Footer } from './components/layout/Footer';
 import { Home } from './pages/Home';
-import { Sabores } from './pages/Sabores';
+import { HomeNova } from './pages/HomeNova'
+import { Delicias } from './pages/Delicias';
+import { QuemSomos } from './pages/QuemSomos';
+import { Pascoa } from './pages/Pascoa';
+import { Contato } from './pages/Contato';
 import { Admin } from './pages/Admin';
 import { PedidosView } from './modules/admin/views/PedidosView';
 import { NewsletterView } from './modules/admin/views/NewsletterView';
@@ -13,7 +17,9 @@ import { ProdutosAddView } from './modules/admin/views/ProdutosAddView';
 import { ProdutosEditView } from './modules/admin/views/ProdutosEditView';
 import { CategoriasView } from './modules/admin/views/CategoriasView';
 
-// 1. Criamos um Layout para o Site Público
+// Importação do seu novo componente de manipulação de navegação
+import { NavigationHandler } from './components/functions/NavigationHandler';
+
 const SiteLayout = () => (
   <div className="min-h-screen bg-white flex flex-col">
     <Header />
@@ -28,14 +34,23 @@ const SiteLayout = () => (
 function App() {
   return (
     <BrowserRouter>
-      {/* Toaster posicionado no topo para melhor visibilidade no admin */}
+      {/* ESTRATÉGIA STAFF: O NavigationHandler fica aqui no topo. 
+          Ele observa a 'location' e dispara o scroll/fechamento de menu 
+          antes que o novo conteúdo da rota termine de montar.
+      */}
+      <NavigationHandler />
+      
       <Toaster position="top-right" richColors closeButton />
       
       <Routes>
-        {/* ROTAS DO SITE */}
+        {/* ROTAS DO SITE PÚBLICO */}
         <Route element={<SiteLayout />}>
+          <Route path="/homenova" element={<HomeNova />} />
           <Route path="/" element={<Home />} />
-          <Route path="/sabores" element={<Sabores />} />
+          <Route path="/delicias" element={<Delicias />} />
+          <Route path="/pascoa" element={<Pascoa />} />
+          <Route path="/quem-somos" element={<QuemSomos />} /> 
+          <Route path="/contato" element={<Contato />} />
         </Route>
 
         {/* ROTAS DO ADMIN */}
@@ -45,7 +60,6 @@ function App() {
           <Route path="pedidos" element={<PedidosView />} />
           <Route path="newsletter" element={<NewsletterView/>} />
           
-          {/* Módulo de Produtos */}
           <Route path="categorias" element={<CategoriasView />} />
           <Route path="produtos" element={<ProdutosListaView />} />
           <Route path="produtos/add" element={<ProdutosAddView />} /> 

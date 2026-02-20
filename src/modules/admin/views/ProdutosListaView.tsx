@@ -1,6 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
-import { Plus, Edit3, Trash2, Tag, Filter, ChevronDown, Check, X, Loader2 } from 'lucide-react';
+import { 
+    Plus, Edit3, Trash2, Tag, Filter, 
+    ChevronDown, Check, X, Loader2, Eye, EyeOff 
+} from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
@@ -19,6 +22,7 @@ export const ProdutosListaView = () => {
                 axios.get('https://anatilde.com.br/api/admin_produtos.php'),
                 axios.get('https://anatilde.com.br/api/admin_categorias.php')
             ]);
+            // Garantimos que os dados cheguem com o formato correto
             setProdutos(Array.isArray(resProds.data) ? resProds.data : []);
             setCategorias(Array.isArray(resCats.data) ? resCats.data : []);
         } catch (err) {
@@ -39,25 +43,43 @@ export const ProdutosListaView = () => {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    // FUNÇÃO PARA DELETAR PRODUTO
+    const toggleStatus = async (id: number, currentStatus: any) => {
+        // Converte para número para garantir a lógica
+        const statusAtual = Number(currentStatus);
+        const newStatus = statusAtual === 1 ? 0 : 1;
+        
+        try {
+            const res = await axios.post('https://anatilde.com.br/api/admin_produtos_status.php', {
+                id,
+                active: newStatus
+            });
+
+            if (res.data.success) {
+                setProdutos(prev => prev.map(p => p.id === id ? { ...p, active: newStatus } : p));
+                toast.success(newStatus === 1 ? "Produto visível na loja" : "Produto oculto na loja");
+            }
+        } catch (error) {
+            toast.error("Erro ao alterar visibilidade");
+        }
+    };
+
     const handleDelete = async (id: number, name: string) => {
         const confirmar = window.confirm(`Tem certeza que deseja excluir o produto "${name}"?`);
         
         if (confirmar) {
             const toastId = toast.loading("Excluindo produto...");
             try {
-                // Certifique-se de que este endpoint existe no seu PHP
-                const res = await axios.post('https://anatilde.com.br/api/admin_produtos_delete.php', { id });
+                const formData = new FormData();
+                formData.append('id', String(id));
+                const res = await axios.post('https://anatilde.com.br/api/admin_produtos_delete.php', formData);
 
                 if (res.data.success) {
                     toast.success("Produto removido com sucesso!", { id: toastId });
-                    // Atualiza a lista local removendo o item deletado
                     setProdutos(prev => prev.filter(p => p.id !== id));
                 } else {
                     toast.error(res.data.message || "Erro ao excluir", { id: toastId });
                 }
             } catch (error) {
-                console.error(error);
                 toast.error("Erro de conexão com o servidor", { id: toastId });
             }
         }
@@ -133,53 +155,76 @@ export const ProdutosListaView = () => {
 
             {produtosFiltrados.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {produtosFiltrados.map((prod) => (
-                        <div key={prod.id} className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden flex flex-col group hover:shadow-xl hover:shadow-slate-200/50 transition-all duration-300">
-                            <div className="h-56 bg-slate-50 relative overflow-hidden">
-                                <img 
-                                    src={prod.image_url?.startsWith('http') ? prod.image_url : `https://anatilde.com.br/uploads/produtos/${prod.image_url}`} 
-                                    alt={prod.name} 
-                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" 
-                                    onError={(e) => { (e.target as HTMLImageElement).src = 'https://placehold.co/600x400?text=Sem+Imagem' }}
-                                />
-                                <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-md px-3 py-1.5 rounded-full flex items-center gap-2 shadow-sm border border-white/20">
-                                    <Tag size={12} className="text-pink-500" />
-                                    <span className="text-[10px] font-black uppercase tracking-wider text-slate-700">
-                                        {categorias.find(c => String(c.id) === String(prod.category_id))?.name || 'Geral'}
-                                    </span>
-                                </div>
-                            </div>
+                    {produtosFiltrados.map((prod) => {
+                        // Garantimos que 'active' seja tratado como número
+                        const isAtivo = Number(prod.active) === 1;
 
-                            <div className="p-8 flex-grow flex flex-col">
-                                <h3 className="font-bold text-slate-800 text-lg leading-tight mb-2">{prod.name}</h3>
-                                <p className="text-slate-400 text-xs line-clamp-2 mb-6 h-8">{prod.description}</p>
-                                
-                                <div className="flex justify-between items-center mt-auto">
-                                    <div className="flex flex-col">
-                                        <span className="text-[10px] font-black text-slate-300 uppercase">Preço</span>
-                                        <span className="text-slate-900 font-black text-xl">R$ {Number(prod.price).toFixed(2)}</span>
+                        return (
+                            <div key={prod.id} className={`bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden flex flex-col group hover:shadow-xl hover:shadow-slate-200/50 transition-all duration-300 ${!isAtivo ? 'opacity-75' : ''}`}>
+                                <div className="h-56 bg-slate-50 relative overflow-hidden">
+                                    <img 
+                                        src={prod.image_url?.startsWith('http') ? prod.image_url : `https://anatilde.com.br/uploads/produtos/${prod.image_url}`} 
+                                        alt={prod.name} 
+                                        className={`w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ${!isAtivo ? 'grayscale' : ''}`} 
+                                        onError={(e) => { (e.target as HTMLImageElement).src = 'https://placehold.co/600x400?text=Sem+Imagem' }}
+                                    />
+                                    <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-md px-3 py-1.5 rounded-full flex items-center gap-2 shadow-sm border border-white/20">
+                                        <Tag size={12} className="text-pink-500" />
+                                        <span className="text-[10px] font-black uppercase tracking-wider text-slate-700">
+                                            {categorias.find(c => String(c.id) === String(prod.category_id))?.name || 'SEM CATEGORIA'}
+                                        </span>
                                     </div>
                                     
-                                    <div className="flex gap-2 relative z-10">
-                                        <button 
-                                            onClick={() => navigate(`/admin/produtos/edit/${prod.id}`)}
-                                            className="p-3 text-slate-400 hover:text-white hover:bg-slate-900 transition-all bg-slate-50 rounded-2xl"
-                                            title="Editar"
-                                        >
-                                            <Edit3 size={18} />
-                                        </button>
-                                        <button 
-                                            onClick={() => handleDelete(prod.id, prod.name)}
-                                            className="p-3 text-slate-400 hover:text-white hover:bg-red-500 transition-all bg-slate-50 rounded-2xl"
-                                            title="Excluir"
-                                        >
-                                            <Trash2 size={18} />
-                                        </button>
+                                    {!isAtivo && (
+                                        <div className="absolute inset-0 bg-slate-900/40 flex items-center justify-center">
+                                            <span className="bg-white text-slate-900 px-4 py-1 rounded-full text-xs font-black uppercase tracking-widest shadow-lg">Inativo</span>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="p-8 flex-grow flex flex-col">
+                                    <h3 className="font-bold text-slate-800 text-lg leading-tight mb-2">{prod.name}</h3>
+                                    <p className="text-slate-400 text-xs line-clamp-2 mb-6 h-8">{prod.description}</p>
+                                    
+                                    <div className="flex justify-between items-center mt-auto">
+                                        <div className="flex flex-col">
+                                            <span className="text-[10px] font-black text-slate-300 uppercase">Preço</span>
+                                            <span className="text-slate-900 font-black text-xl">R$ {Number(prod.price).toFixed(2)}</span>
+                                        </div>
+                                        
+                                        <div className="flex gap-2 relative z-10">
+                                            <button 
+                                                onClick={() => toggleStatus(prod.id, prod.active)}
+                                                className={`p-3 transition-all rounded-2xl ${
+                                                    isAtivo 
+                                                    ? 'text-pink-500 bg-pink-50 hover:bg-pink-100' 
+                                                    : 'text-slate-400 bg-slate-100 hover:bg-slate-200'
+                                                }`}
+                                                title={isAtivo ? "Ocultar da loja" : "Mostrar na loja"}
+                                            >
+                                                {isAtivo ? <Eye size={18} /> : <EyeOff size={18} />}
+                                            </button>
+
+                                            <button 
+                                                onClick={() => navigate(`/admin/produtos/edit/${prod.id}`)}
+                                                className="p-3 text-slate-400 hover:text-white hover:bg-slate-900 transition-all bg-slate-50 rounded-2xl"
+                                                title="Editar"
+                                            >
+                                                <Edit3 size={18} />
+                                            </button>
+                                            <button 
+                                                onClick={() => handleDelete(prod.id, prod.name)}
+                                                className="p-3 text-slate-400 hover:text-white hover:bg-red-500 transition-all bg-slate-50 rounded-2xl"
+                                                title="Excluir"
+                                            >
+                                                <Trash2 size={18} />
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
             ) : (
                 <div className="bg-white p-20 rounded-[3rem] text-center border border-slate-100 shadow-sm">
