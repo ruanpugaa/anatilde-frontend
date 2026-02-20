@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
-import { Trash2, Plus, Tag, Loader2, X, Upload, Edit3 } from 'lucide-react';
+import { Trash2, Plus, Tag, Loader2, X, Upload, Edit3, Link2 } from 'lucide-react'; // Adicionei Link2
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -11,9 +11,23 @@ export const CategoriasView = () => {
     const [editingCategory, setEditingCategory] = useState<any | null>(null);
     
     const [newName, setNewName] = useState('');
+    const [newSlug, setNewSlug] = useState(''); // Novo estado para o Slug
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // Função auxiliar para formatar o slug
+    const slugify = (text: string) => {
+        return text
+            .toString()
+            .toLowerCase()
+            .trim()
+            .normalize('NFD') // Remove acentos
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/\s+/g, '-') // Espaços por hifens
+            .replace(/[^\w-]+/g, '') // Remove caracteres especiais
+            .replace(/--+/g, '-'); // Remove hifens duplos
+    };
 
     const fetchCats = async () => {
         try {
@@ -24,20 +38,28 @@ export const CategoriasView = () => {
 
     useEffect(() => { fetchCats(); }, []);
 
-    // Abre modal para criação
+    // Atualiza o slug automaticamente ao digitar o nome (apenas se for nova categoria)
+    const handleNameChange = (val: string) => {
+        setNewName(val);
+        if (!editingCategory) {
+            setNewSlug(slugify(val));
+        }
+    };
+
     const handleOpenCreate = () => {
         setEditingCategory(null);
         setNewName('');
+        setNewSlug('');
         setPreviewUrl(null);
         setSelectedFile(null);
         setIsModalOpen(true);
     };
 
-    // Abre modal para edição
     const handleOpenEdit = (cat: any) => {
         setEditingCategory(cat);
         setNewName(cat.name);
-        setPreviewUrl(cat.image_url); // Mostra a imagem atual
+        setNewSlug(cat.slug || ''); // Carrega o slug existente
+        setPreviewUrl(cat.image_url);
         setSelectedFile(null);
         setIsModalOpen(true);
     };
@@ -56,6 +78,7 @@ export const CategoriasView = () => {
 
         const formData = new FormData();
         formData.append('name', newName);
+        formData.append('slug', newSlug); // Envia o slug para o PHP
         if (selectedFile) formData.append('image', selectedFile);
         if (editingCategory) formData.append('id', editingCategory.id);
 
@@ -84,6 +107,7 @@ export const CategoriasView = () => {
 
     return (
         <div className="max-w-4xl mx-auto p-4">
+            {/* Header ... mantido igual */}
             <div className="flex justify-between items-end mb-10">
                 <div>
                     <h2 className="text-3xl font-black text-stone-800 tracking-tight">Categorias</h2>
@@ -102,6 +126,7 @@ export const CategoriasView = () => {
                         </div>
                         <div className="flex-1">
                             <h4 className="font-bold text-stone-800 text-lg">{cat.name}</h4>
+                            <p className="text-[10px] text-stone-400 font-mono">/{cat.slug}</p>
                             <div className="flex gap-2 mt-1">
                                 <button onClick={() => handleOpenEdit(cat)} className="text-[10px] uppercase font-bold text-stone-400 hover:text-pink-500 flex items-center gap-1 transition-colors">
                                     <Edit3 size={12} /> Editar
@@ -122,7 +147,7 @@ export const CategoriasView = () => {
                         <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="relative bg-white w-full max-w-md p-8 rounded-[3rem] shadow-2xl">
                             <h3 className="text-xl font-bold text-stone-800 mb-6">{editingCategory ? 'Editar Categoria' : 'Nova Categoria'}</h3>
                             
-                            <form onSubmit={handleSubmit} className="space-y-6">
+                            <form onSubmit={handleSubmit} className="space-y-4">
                                 <div onClick={() => fileInputRef.current?.click()} className="relative aspect-video rounded-[2rem] border-2 border-dashed border-stone-100 bg-stone-50 flex flex-col items-center justify-center cursor-pointer overflow-hidden group">
                                     {previewUrl ? (
                                         <>
@@ -135,9 +160,21 @@ export const CategoriasView = () => {
                                     <input type="file" ref={fileInputRef} onChange={handleFileSelect} className="hidden" />
                                 </div>
 
-                                <input type="text" required value={newName} onChange={e => setNewName(e.target.value)} className="w-full bg-stone-50 border-none rounded-2xl p-4 outline-none font-medium" placeholder="Nome da Categoria" />
+                                {/* Campo de Nome */}
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-bold text-stone-400 uppercase ml-2 tracking-widest">Nome</label>
+                                    <input type="text" required value={newName} onChange={e => handleNameChange(e.target.value)} className="w-full bg-stone-50 border-none rounded-2xl p-4 outline-none font-medium" placeholder="Ex: Bolos de Festa" />
+                                </div>
 
-                                <button disabled={loading} className="w-full bg-stone-900 text-white p-5 rounded-2xl font-bold hover:bg-pink-500 transition-all flex items-center justify-center gap-2">
+                                {/* Campo de Slug */}
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-bold text-stone-400 uppercase ml-2 tracking-widest flex items-center gap-1">
+                                        <Link2 size={10} /> URL Amigável (slug)
+                                    </label>
+                                    <input type="text" required value={newSlug} onChange={e => setNewSlug(slugify(e.target.value))} className="w-full bg-stone-100 border-none rounded-2xl p-4 outline-none font-mono text-sm text-pink-600" placeholder="bolos-festa" />
+                                </div>
+
+                                <button disabled={loading} className="w-full bg-stone-900 text-white p-5 rounded-2xl font-bold hover:bg-pink-500 transition-all flex items-center justify-center gap-2 mt-2">
                                     {loading ? <Loader2 className="animate-spin" /> : editingCategory ? 'Salvar Alterações' : 'Criar Categoria'}
                                 </button>
                             </form>
