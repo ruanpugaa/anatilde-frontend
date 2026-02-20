@@ -1,62 +1,76 @@
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Autoplay, EffectFade, Pagination } from 'swiper/modules';
+import { bannerService } from '../../services/bannerService';
+import { Banner } from '../../@types/banner';
+import { Link } from 'react-router-dom';
 
-// Estilos Swiper (Importados aqui para isolar a dependência)
+// Estilos Swiper
 import 'swiper/css';
 import 'swiper/css/effect-fade';
 import 'swiper/css/pagination';
 
-interface SlideItem {
-    id: number;
-    image: string;
-    title: string;
-    subtitle: string;
-    buttonText: string;
-    buttonLink: string;
-}
-
-const SLIDES: SlideItem[] = [
-    {
-        id: 1,
-        image: "https://images.unsplash.com/photo-1575032617751-6ddec2089882?q=80&w=2000",
-        title: "Anatilde",
-        subtitle: "Artesanal & Inesquecível",
-        buttonText: "Explorar Menu",
-        buttonLink: "/delicias"
-    },
-    {
-        id: 2,
-        image: "https://images.unsplash.com/photo-1582106245687-cbb466a9f07f?q=80&w=2000", // Imagem diferente para o exemplo
-        title: "Anatilde",
-        subtitle: "Momentos Doces",
-        buttonText: "Ver Favoritos",
-        buttonLink: "/delicias"
-    }
-];
-
 export const HeroSlider = () => {
+    const [banners, setBanners] = useState<Banner[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const loadBanners = async () => {
+            try {
+                const data = await bannerService.getAll();
+                // Filtramos os banners ativos. No PHP/MySQL is_active pode vir como string "1" ou number 1
+                const activeBanners = data.filter(b => Number(b.is_active) === 1);
+                setBanners(activeBanners);
+            } catch (error) {
+                console.error("Erro ao carregar banners do Hero:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+        loadBanners();
+    }, []);
+
+    if (loading) {
+        return (
+            <div className="h-[90vh] w-full bg-stone-100 animate-pulse flex items-center justify-center">
+                <span className="text-stone-400 font-bold uppercase tracking-[0.3em] text-[10px]">
+                    Carregando Vitrine...
+                </span>
+            </div>
+        );
+    }
+
+    if (banners.length === 0) return null;
+
     return (
-        <section className="h-[90vh] w-full relative">
+        <section className="h-[90vh] w-full relative overflow-hidden hero-swiper-custom">
             <Swiper 
                 modules={[Autoplay, EffectFade, Pagination]} 
                 effect="fade" 
-                autoplay={{ delay: 5000, disableOnInteraction: false }} 
-                pagination={{ clickable: true }} 
+                autoplay={{ delay: 6000, disableOnInteraction: false }} 
+                pagination={{ 
+                    clickable: true,
+                    dynamicBullets: true 
+                }} 
                 className="h-full w-full"
             >
-                {SLIDES.map((slide) => (
+                {banners.map((slide) => (
                     <SwiperSlide key={slide.id} className="relative">
+                        {/* Overlay para contraste de texto */}
+                        <div className="absolute inset-0 bg-black/40 z-10" />
+                        
                         <img 
-                            src={slide.image} 
+                            src={slide.image_url} 
                             className="w-full h-full object-cover" 
                             alt={slide.title} 
                         />
-                        <div className="absolute inset-0 bg-black/40 z-10 flex flex-col items-center justify-center text-white text-center px-4">
+                        
+                        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center text-white text-center px-4">
                             <motion.h1 
-                                initial={{ opacity: 0, y: 30 }} 
+                                initial={{ opacity: 0, y: 40 }} 
                                 whileInView={{ opacity: 1, y: 0 }}
-                                transition={{ duration: 0.8 }}
+                                transition={{ duration: 0.8, ease: "easeOut" }}
                                 className="text-6xl md:text-8xl font-serif italic mb-6"
                             >
                                 {slide.title}
@@ -65,8 +79,8 @@ export const HeroSlider = () => {
                             <motion.p 
                                 initial={{ opacity: 0 }} 
                                 whileInView={{ opacity: 1 }}
-                                transition={{ delay: 0.3, duration: 0.8 }}
-                                className="text-[10px] uppercase tracking-[0.6em] font-bold mb-8"
+                                transition={{ delay: 0.3, duration: 1 }}
+                                className="text-[10px] md:text-xs uppercase tracking-[0.6em] font-bold mb-10 max-w-xl leading-relaxed"
                             >
                                 {slide.subtitle}
                             </motion.p>
@@ -76,17 +90,34 @@ export const HeroSlider = () => {
                                 whileInView={{ opacity: 1, y: 0 }}
                                 transition={{ delay: 0.5 }}
                             >
-                                <a 
-                                    href={slide.buttonLink} 
-                                    className="bg-white text-black px-12 py-4 rounded-full font-bold text-[10px] tracking-widest uppercase hover:bg-pink-500 hover:text-white transition-all shadow-2xl"
+                                <Link 
+                                    to={slide.button_link} 
+                                    className="bg-white text-black px-12 py-4 rounded-full font-bold text-[10px] tracking-[0.2em] uppercase hover:bg-pink-500 hover:text-white transition-all shadow-2xl inline-block"
                                 >
-                                    {slide.buttonText}
-                                </a>
+                                    Ver Mais
+                                </Link>
                             </motion.div>
                         </div>
                     </SwiperSlide>
                 ))}
             </Swiper>
+
+            {/* Injeção de CSS compatível com TypeScript/Vite */}
+            <style dangerouslySetInnerHTML={{ __html: `
+                .hero-swiper-custom .swiper-pagination-bullet-active {
+                    background: #ec4899 !important;
+                }
+                .hero-swiper-custom .swiper-pagination-bullet {
+                    background: #fff;
+                    opacity: 0.6;
+                }
+                .hero-swiper-custom .swiper-pagination-dynamic {
+                    bottom: 40px !important;
+                }
+                .hero-swiper-custom .swiper-effect-fade .swiper-slide {
+                    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+                }
+            `}} />
         </section>
     );
 };

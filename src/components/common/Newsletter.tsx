@@ -29,8 +29,8 @@ export const Newsletter = () => {
     };
 
     return (
-        <section className="py-24 px-6 bg-white border-t border-stone-100">
-            <div className="max-w-[1200px] mx-auto">
+        <section className="py-24 bg-white border-t border-stone-100">
+            <div className="px-[5vw] md:px-[10vw] mx-auto">
                 <div className="flex flex-col lg:flex-row items-center justify-between gap-12 lg:gap-20">
                     
                     <motion.div className="max-w-md text-center lg:text-left">

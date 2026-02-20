@@ -1,6 +1,8 @@
+
 import { motion, Variants } from 'framer-motion';
 import { Gift, Briefcase, ArrowRight, Sparkles, Heart } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { Newsletter } from '../components/common/Newsletter';
 
 // Tipagem para as variantes de animação
 const containerVariants: Variants = {
@@ -142,6 +144,8 @@ export const QuemSomos = () => {
                     </div>
                 </div>
             </section>
+
+            <Newsletter />
 
             
         </div>

@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { 
     LayoutDashboard, Package, Mail, LogOut, 
-    PlusCircle, List, Tag, Menu, X, ChevronLeft, ChevronRight 
+    List, Tag, Menu, X, ChevronLeft, ChevronRight,
+    Image, Settings // Importamos o Settings para as Configurações
 } from 'lucide-react';
 
 export const AdminShell = ({ children, user, onLogout }: any) => {
@@ -18,7 +19,6 @@ export const AdminShell = ({ children, user, onLogout }: any) => {
         { id: '/admin/newsletter', label: 'Newsletter', icon: Mail },
     ];
 
-    // Helper para decidir se mostra o texto (Sempre mostra no mobile, no desktop depende do collapse)
     const showText = !isCollapsed || isMobileOpen;
 
     return (
@@ -48,7 +48,6 @@ export const AdminShell = ({ children, user, onLogout }: any) => {
                         <div className="mx-auto font-black text-pink-500 text-xl">A</div>
                     )}
                     
-                    {/* Botão Retrátil (Apenas Desktop) */}
                     <button 
                         onClick={() => setIsCollapsed(!isCollapsed)}
                         className="hidden lg:flex p-1.5 rounded-lg bg-slate-50 text-slate-400 hover:text-pink-500 transition-colors"
@@ -56,7 +55,6 @@ export const AdminShell = ({ children, user, onLogout }: any) => {
                         {isCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
                     </button>
                     
-                    {/* Botão Fechar (Apenas Mobile) */}
                     <button onClick={() => setIsMobileOpen(false)} className="lg:hidden text-slate-400 p-2">
                         <X size={24} />
                     </button>
@@ -76,23 +74,34 @@ export const AdminShell = ({ children, user, onLogout }: any) => {
                         </Link>
                     ))}
 
+                    {/* SEÇÃO: VITRINE */}
                     <div className="pt-4 mt-4 border-t border-slate-50">
-                        {showText && <p className="px-4 text-[10px] font-black text-slate-300 uppercase mb-2">Produtos</p>}
-                        <Link to="/admin/produtos" className={`flex items-center gap-4 px-4 py-2.5 text-sm font-bold transition-colors whitespace-nowrap ${location.pathname === '/admin/produtos' ? 'text-pink-500' : 'text-slate-500 hover:text-pink-500'}`}>
-                            <List size={20} className="shrink-0" />
-                            {showText && <span>Listar</span>}
-                        </Link>
-                        <Link to="/admin/produtos/add" className={`flex items-center gap-4 px-4 py-2.5 text-sm font-bold transition-colors whitespace-nowrap ${location.pathname === '/admin/produtos/add' ? 'text-pink-500' : 'text-slate-500 hover:text-pink-500'}`}>
-                            <PlusCircle size={20} className="shrink-0" />
-                            {showText && <span>Adicionar</span>}
+                        {showText && <p className="px-4 text-[10px] font-black text-slate-300 uppercase mb-2">Vitrine</p>}
+                        <Link to="/admin/banners" className={`flex items-center gap-4 px-4 py-2.5 text-sm font-bold transition-colors whitespace-nowrap ${location.pathname === '/admin/banners' ? 'text-pink-500' : 'text-slate-500 hover:text-pink-500'}`}>
+                            <Image size={20} className="shrink-0" />
+                            {showText && <span>Banners Home</span>}
                         </Link>
                     </div>
 
-                    <div className="pt-4 mt-2">
-                        {showText && <p className="px-4 text-[10px] font-black text-slate-300 uppercase mb-2">Categorias</p>}
+                    {/* SEÇÃO: CATÁLOGO */}
+                    <div className="pt-4 mt-2 border-t border-slate-50">
+                        {showText && <p className="px-4 text-[10px] font-black text-slate-300 uppercase mb-2">Catálogo</p>}
+                        <Link to="/admin/produtos" className={`flex items-center gap-4 px-4 py-2.5 text-sm font-bold transition-colors whitespace-nowrap ${location.pathname === '/admin/produtos' ? 'text-pink-500' : 'text-slate-500 hover:text-pink-500'}`}>
+                            <List size={20} className="shrink-0" />
+                            {showText && <span>Produtos</span>}
+                        </Link>
                         <Link to="/admin/categorias" className={`flex items-center gap-4 px-4 py-2.5 text-sm font-bold transition-colors whitespace-nowrap ${location.pathname === '/admin/categorias' ? 'text-pink-500' : 'text-slate-500 hover:text-pink-500'}`}>
                             <Tag size={20} className="shrink-0" />
-                            {showText && <span>Gerenciar</span>}
+                            {showText && <span>Categorias</span>}
+                        </Link>
+                    </div>
+
+                    {/* SEÇÃO: CONFIGURAÇÕES (Nova) */}
+                    <div className="pt-4 mt-2 border-t border-slate-50">
+                        {showText && <p className="px-4 text-[10px] font-black text-slate-300 uppercase mb-2">Sistema</p>}
+                        <Link to="/admin/configuracoes" className={`flex items-center gap-4 px-4 py-2.5 text-sm font-bold transition-colors whitespace-nowrap ${location.pathname === '/admin/configuracoes' ? 'text-pink-500' : 'text-slate-500 hover:text-pink-500'}`}>
+                            <Settings size={20} className="shrink-0" />
+                            {showText && <span>Configurações</span>}
                         </Link>
                     </div>
                 </nav>

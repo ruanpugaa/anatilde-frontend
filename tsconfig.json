@@ -11,14 +11,20 @@
     "forceConsistentCasingInFileNames": true,
     "module": "ESNext",
     
-    /* ALTERE ESTAS DUAS LINHAS ABAIXO */
-    "moduleResolution": "node",
+    /* CORREÇÃO AQUI: 'bundler' é o padrão para Vite/Modern Web */
+    "moduleResolution": "bundler",
     "resolveJsonModule": true,
     
     "isolatedModules": true,
     "noEmit": true,
     "jsx": "react-jsx",
-    "types": ["vite/client"]
+    "types": ["vite/client"],
+    
+    /* STAFF TIP: Adicione baseUrl e paths para evitar imports relativos longos */
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"]
+    }
   },
   "include": ["src"],
   "references": [{ "path": "./tsconfig.node.json" }]

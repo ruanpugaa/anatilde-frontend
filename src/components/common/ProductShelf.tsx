@@ -1,5 +1,5 @@
 import React from 'react';
-import { ProductCard } from '../common/ProductCard';
+import { ProductCard } from './ProductCard';
 import { Product } from '../../@types/product';
 import { motion } from 'framer-motion';
 
@@ -15,7 +15,7 @@ export const ProductShelf = ({ title, subtitle, products, limit = 8 }: ProductSh
     const displayProducts = products?.slice(0, limit) || [];
 
     return (
-        <section className="py-24 px-6 md:px-20 max-w-[1600px] mx-auto">
+        <section className="py-24 px-[5vw] md:px-[10vw] mx-auto">
             {/* Header da Seção */}
             <motion.div 
                 initial={{ opacity: 0, y: 20 }}

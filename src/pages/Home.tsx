@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { HeroSlider } from '../components/home/HeroSlider';
 import { BrandMarquee } from '../components/home/BrandMarquee';
-import { ProductShelf } from '../components/home/ProductShelf';
+import { EasterCountdown } from '../components/home/EasterCountdown';
+import { ProductShelf } from '../components/common/ProductShelf';
 import { CategoryScroll } from '../components/home/CategoryScroll';
 import { Product } from '../@types/product';
 import { productService } from '../services/productService';
@@ -18,9 +19,9 @@ export const Home = () => {
         <div className="bg-[#FFFCFB] w-full">
             {/* 1. Header Dinâmico */}
             <HeroSlider />
-            
+            <EasterCountdown />
             {/* 2. Prova Social / Autoridade */}
-            <BrandMarquee />
+            
 
             {/* 3. Conversão Direta (Mais Vendidos) */}
             <ProductShelf 
