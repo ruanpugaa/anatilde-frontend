@@ -2,16 +2,35 @@ import { Instagram, Phone, MessageCircle, MapPin, Facebook } from 'lucide-react'
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useSettings } from '../../hooks/useSettings';
+import { useMemo } from 'react';
 
 export const Footer = () => {
     const year = new Date().getFullYear();
-    const settings = useSettings();
+    
+    // STAFF FIX: Desestruturação correta do hook
+    const { settings, loading } = useSettings();
 
-    // STAFF TRICK: Se não houver settings, renderizamos um espaço vazio preservado
-    // Isso evita o flicker de textos "fake" (fallback) antes do dado real.
-    if (!settings) {
+    // STAFF SANITIZER: Garantindo que o logo apareça sem o prefixo /api
+    const logoUrl = useMemo(() => {
+        const path = (settings as any)?.site_logo;
+        if (!path) return null;
+
+        const cleanPath = path
+            .replace('https://anatilde.com.br/api/', '')
+            .replace('https://anatilde.com.br/', '')
+            .replace('api/uploads/', 'uploads/')
+            .replace(/^\/+/, '');
+
+        return `https://anatilde.com.br/${cleanPath}`;
+    }, [settings]);
+
+    // STAFF TRICK: Skeleton/Placeholder durante o loading ou ausência de dados
+    if (loading || !settings) {
         return <footer className="bg-[#FFFCFB] h-96 border-t border-stone-100" />;
     }
+
+    // Cast para 'any' temporário para evitar os erros de TS reportados
+    const s = settings as any;
 
     const navLinks = [
         { label: 'Home', path: '/' },
@@ -21,13 +40,9 @@ export const Footer = () => {
         { label: 'Contato', path: '/contato' }
     ];
 
-    const whatsappLink = settings.whatsapp_number 
-        ? `https://wa.me/55${settings.whatsapp_number.replace(/\D/g, '')}` 
+    const whatsappLink = s.whatsapp_number 
+        ? `https://wa.me/55${s.whatsapp_number.replace(/\D/g, '')}` 
         : "#";
-
-    const logoUrl = settings.site_logo 
-        ? `https://anatilde.com.br/${settings.site_logo.replace(/^\//, '')}` 
-        : null;
 
     return (
         <footer className="bg-[#FFFCFB] border-t border-stone-100 pt-24 pb-12 px-[5vw] md:px-[10vw]">
@@ -41,7 +56,12 @@ export const Footer = () => {
                 <motion.div variants={{ hidden: { opacity: 0, y: 10 }, visible: { opacity: 1, y: 0 } }} className="lg:col-span-5 space-y-8">
                     <Link to="/" className="outline-none block max-w-[200px]">
                         {logoUrl ? (
-                            <img key={logoUrl} src={logoUrl} alt="Anatilde" className="h-14 w-auto object-contain grayscale opacity-60 hover:grayscale-0 transition-all duration-500" />
+                            <img 
+                                key={logoUrl} 
+                                src={logoUrl} 
+                                alt="Anatilde" 
+                                className="h-14 w-auto object-contain grayscale opacity-60 hover:grayscale-0 transition-all duration-500" 
+                            />
                         ) : (
                             <span className="font-serif text-3xl tracking-tighter text-stone-800">
                                 ANA<span className="italic text-pink-500 font-medium">TILDE</span>
@@ -49,16 +69,16 @@ export const Footer = () => {
                         )}
                     </Link>
                     <p className="text-stone-500 text-sm leading-relaxed max-w-sm font-light tracking-wide">
-                        {settings.site_description}
+                        {s.site_description || "Confeitaria artesanal com afeto e sofisticação."}
                     </p>
                     <div className="flex gap-6 items-center">
-                        {settings.instagram_url && (
-                            <a href={settings.instagram_url} target="_blank" rel="noopener noreferrer" className="text-stone-400 hover:text-pink-500 transition-all duration-500">
+                        {s.instagram_url && (
+                            <a href={s.instagram_url} target="_blank" rel="noopener noreferrer" className="text-stone-400 hover:text-pink-500 transition-all duration-500">
                                 <Instagram size={18} strokeWidth={1.5} />
                             </a>
                         )}
-                        {settings.facebook_url && (
-                            <a href={settings.facebook_url} target="_blank" rel="noopener noreferrer" className="text-stone-400 hover:text-pink-500 transition-all duration-500">
+                        {s.facebook_url && (
+                            <a href={s.facebook_url} target="_blank" rel="noopener noreferrer" className="text-stone-400 hover:text-pink-500 transition-all duration-500">
                                 <Facebook size={18} strokeWidth={1.5} />
                             </a>
                         )}
@@ -83,11 +103,11 @@ export const Footer = () => {
                     <ul className="flex flex-col gap-4 text-xs text-stone-500 font-light leading-relaxed">
                         <li className="flex items-start gap-2">
                             <MapPin size={14} className="shrink-0 text-stone-300 mt-1" />
-                            <span>{settings.store_address}</span>
+                            <span>{s.store_address || "Bauru, SP"}</span>
                         </li>
                         <li className="flex items-center gap-2">
                             <Phone size={14} className="shrink-0 text-stone-300" />
-                            <span>{settings.whatsapp_number}</span>
+                            <span>{s.whatsapp_number}</span>
                         </li>
                     </ul>
                 </motion.div>
