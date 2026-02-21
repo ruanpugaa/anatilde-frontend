@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import axios from 'axios';
+import api from '../../../services/api'; // Importando sua instância configurada
 
 export const Login = ({ onLogin }: { onLogin: (user: any) => void }) => {
     const [username, setUsername] = useState('');
@@ -11,11 +11,26 @@ export const Login = ({ onLogin }: { onLogin: (user: any) => void }) => {
         e.preventDefault();
         setError('');
         setLoading(true);
+        
         try {
-            const res = await axios.post('https://anatilde.com.br/api/admin_login.php', { username, password });
-            onLogin(res.data.user);
+            /** * STAFF: Alterado para a rota correta e usando a instância 'api' 
+             * que já deve conter as configurações de baseURL e interceptors.
+             */
+            const res = await api.post('/modules/auth/login.php', { 
+                username, 
+                password 
+            });
+
+            if (res.data.success) {
+                onLogin(res.data.user);
+            } else {
+                setError(res.data.error || 'Credenciais inválidas');
+            }
         } catch (err: any) {
-            setError(err.response?.data?.error || 'Erro ao conectar ao servidor');
+            // Tratamento de erro robusto para falhas de rede ou CORS
+            const msg = err.response?.data?.error || 'Erro de conexão (CORS ou Rede)';
+            setError(msg);
+            console.error("Login Error:", err);
         } finally {
             setLoading(false);
         }
@@ -33,33 +48,40 @@ export const Login = ({ onLogin }: { onLogin: (user: any) => void }) => {
                     </div>
 
                     {error && (
-                        <div className="bg-red-50 text-red-600 p-4 rounded-2xl text-xs font-bold mb-6 border border-red-100 text-center animate-shake">
+                        <div className="bg-red-50 text-red-600 p-4 rounded-2xl text-[10px] font-black mb-6 border border-red-100 text-center uppercase tracking-widest">
                             {error}
                         </div>
                     )}
 
                     <div className="space-y-4">
-                        <input 
-                            type="text" 
-                            placeholder="Usuário" 
-                            className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 transition-all text-sm"
-                            value={username} 
-                            onChange={e => setUsername(e.target.value)}
-                            required
-                        />
-                        <input 
-                            type="password" 
-                            placeholder="Senha" 
-                            className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 transition-all text-sm"
-                            value={password} 
-                            onChange={e => setPassword(e.target.value)}
-                            required
-                        />
+                        <div className="space-y-1">
+                            <label className="text-[10px] font-black text-slate-400 uppercase ml-2">Usuário</label>
+                            <input 
+                                type="text" 
+                                className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-4 focus:ring-pink-500/10 focus:border-pink-500 transition-all text-sm font-bold text-slate-700"
+                                value={username} 
+                                onChange={e => setUsername(e.target.value)}
+                                required
+                            />
+                        </div>
+                        
+                        <div className="space-y-1">
+                            <label className="text-[10px] font-black text-slate-400 uppercase ml-2">Senha</label>
+                            <input 
+                                type="password" 
+                                className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-4 focus:ring-pink-500/10 focus:border-pink-500 transition-all text-sm font-bold text-slate-700"
+                                value={password} 
+                                onChange={e => setPassword(e.target.value)}
+                                required
+                            />
+                        </div>
+
                         <button 
                             disabled={loading}
-                            className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-4 rounded-2xl transition-all shadow-lg shadow-slate-200 disabled:opacity-50 mt-2"
+                            type="submit"
+                            className="w-full bg-slate-900 hover:bg-pink-600 text-white font-black py-5 rounded-[1.5rem] transition-all shadow-lg shadow-slate-200 disabled:opacity-50 mt-4 active:scale-95"
                         >
-                            {loading ? 'Autenticando...' : 'Entrar no Sistema'}
+                            {loading ? 'VALIDANDO ACESSO...' : 'ENTRAR NO SISTEMA'}
                         </button>
                     </div>
                 </form>

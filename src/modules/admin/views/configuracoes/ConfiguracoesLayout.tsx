@@ -23,7 +23,7 @@ export const ConfiguracoesLayout = () => {
             </header>
 
             {/* Barra de Navegação Centralizada */}
-            <nav className="sticky top-4 z-30 flex items-center justify-center p-1.5 bg-white/80 backdrop-blur-xl rounded-[2rem] border border-stone-100 shadow-xl shadow-stone-200/40">
+            <nav className="sticky top-4 z-20 flex items-center justify-center p-1.5 bg-white/80 backdrop-blur-xl rounded-[2rem] border border-stone-100 shadow-xl shadow-stone-200/40">
                 <div className="flex flex-wrap md:flex-nowrap w-full gap-1">
                     {tabs.map(tab => (
                         <NavLink

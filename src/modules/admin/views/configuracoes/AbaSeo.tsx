@@ -101,23 +101,7 @@ export const AbaSEO = () => {
     return (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-8 pb-10">
             
-            {/* Google Search Simulator */}
-            <div className="bg-white p-8 rounded-[2.5rem] border border-stone-100 shadow-sm space-y-4">
-                <h3 className="text-xs font-black text-stone-400 uppercase tracking-widest flex items-center gap-2">
-                    <Eye size={14} className="text-pink-500" /> Preview no Google
-                </h3>
-                <div className="bg-stone-50 p-6 rounded-2xl border border-stone-100 max-w-2xl">
-                    <p className="text-[#1a0dab] text-xl font-medium hover:underline cursor-default truncate">
-                        {settings.seo_title || "Título da Página | Ana Tilde Confeitaria"}
-                    </p>
-                    <p className="text-[#006621] text-sm mt-1 mb-2 truncate">
-                        https://anatilde.com.br
-                    </p>
-                    <p className="text-[#545454] text-sm leading-relaxed line-clamp-2">
-                        {settings.seo_description || "Aqui aparece a descrição do seu site nos resultados de busca do Google..."}
-                    </p>
-                </div>
-            </div>
+        
 
             <form onSubmit={handleSave} className="bg-white p-8 rounded-[3rem] border border-stone-100 space-y-8 shadow-sm">
                 
@@ -230,6 +214,24 @@ export const AbaSEO = () => {
                     </button>
                 </div>
             </form>
+
+             {/* Google Search Simulator */}
+            <div className="bg-white p-8 rounded-[2.5rem] border border-stone-100 shadow-sm space-y-4">
+                <h3 className="text-xs font-black text-stone-400 uppercase tracking-widest flex items-center gap-2">
+                    <Eye size={14} className="text-pink-500" /> Preview no Google
+                </h3>
+                <div className="bg-stone-50 p-6 rounded-2xl border border-stone-100 max-w-2xl">
+                    <p className="text-[#1a0dab] text-xl font-medium hover:underline cursor-default truncate">
+                        {settings.seo_title || "Título da Página | Ana Tilde Confeitaria"}
+                    </p>
+                    <p className="text-[#006621] text-sm mt-1 mb-2 truncate">
+                        https://anatilde.com.br
+                    </p>
+                    <p className="text-[#545454] text-sm leading-relaxed line-clamp-2">
+                        {settings.seo_description || "Aqui aparece a descrição do seu site nos resultados de busca do Google..."}
+                    </p>
+                </div>
+            </div>
         </motion.div>
     );
 };

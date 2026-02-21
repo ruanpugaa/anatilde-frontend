@@ -95,7 +95,7 @@ export const Delicias = () => {
     );
 
     return (
-        <main className="min-h-screen bg-[#FFFCFB] pt-28 pb-20">
+        <main className="min-h-screen bg-[#FFFCFB] pb-20">
             {/* O CategoryCircleSelector deve estar envolto em React.memo para performance total */}
             <CategoryCircleSelector 
                 categories={categories} 

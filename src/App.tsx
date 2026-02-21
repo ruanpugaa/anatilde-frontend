@@ -6,11 +6,11 @@ import { useEffect } from 'react';
 // Layout & Components
 import { Header } from './components/layout/Header';
 import { Sidebar } from './components/layout/Sidebar'; 
-// STAFF: Corrigido o casing para evitar erro de build na Vercel/Linux
 import { WishlistSidebar } from './components/layout/WishlistSidebar'; 
 import { Footer } from './components/layout/Footer';
 import { NavigationHandler } from './components/functions/NavigationHandler';
 import { SEOManager } from './components/functions/SEOManager';
+import { Breadcrumbs } from './components/common/Breadcrumbs'; // Importado aqui
 
 // Pages & Views Públicas
 import { Home } from './pages/Home';
@@ -43,20 +43,13 @@ import { AbaSocial } from './modules/admin/views/configuracoes/AbaSocial';
 import api from './services/api';
 import { useCacheStore } from './store/useCacheStore';
 
-/**
- * STAFF: Hook de Sincronização de Cache
- * Mantém a versão do app atualizada com o servidor para evitar stale data.
- */
 export const useCacheSync = () => {
     const setVersion = useCacheStore(state => state.setVersion);
-
     useEffect(() => {
         const syncVersion = async () => {
             try {
                 const { data } = await api.get('/core/get_cache_version.php');
-                if (data.version) {
-                    setVersion(data.version);
-                }
+                if (data.version) setVersion(data.version);
             } catch (e) {
                 console.warn("[CacheSync] Falha ao sincronizar versão.");
             }
@@ -69,13 +62,21 @@ export const useCacheSync = () => {
 
 /**
  * STAFF: Layout Principal do Site
- * Centraliza os elementos globais de UI (Modais, Sidebars, Overlays)
+ * O Breadcrumbs foi inserido aqui para aparecer apenas no site público.
  */
 const SiteLayout = () => (
   <div className="min-h-screen bg-white flex flex-col">
     <Header />
     <Sidebar /> 
     <WishlistSidebar /> 
+    
+    {/* STAFF: Adicionamos um container de compensação.
+      O 'pt-20' ou 'pt-24' deve ser a altura exata do seu Header fixo.
+    */}
+    <div className="pt-20 md:pt-28"> 
+        <Breadcrumbs /> 
+    </div>
+
     <main className="flex-grow">
       <Outlet /> 
     </main>
@@ -99,23 +100,21 @@ function App() {
             style: { borderRadius: '1rem', border: '1px solid #f5f5f4' },
           }}
         />
-        
+
         <Routes>
-          {/* SITE PÚBLICO */}
+          {/* SITE PÚBLICO - O Breadcrumbs está encapsulado no SiteLayout */}
           <Route element={<SiteLayout />}>
             <Route path="/" element={<Home />} />
             <Route path="/homenova" element={<HomeNova />} />
             <Route path="/delicias" element={<Delicias />} />
             <Route path="/delicias/:categorySlug?" element={<Delicias />} />
-            
             <Route path="/produto/:id" element={<Produto />} />
-            
             <Route path="/pascoa" element={<Pascoa />} />
             <Route path="/quem-somos" element={<QuemSomos />} /> 
             <Route path="/contato" element={<Contato />} />
           </Route>
 
-          {/* PAINEL ADMINISTRATIVO */}
+          {/* PAINEL ADMINISTRATIVO - Sem Breadcrumbs do site (evita conflito visual) */}
           <Route path="/admin" element={<Admin />}>
             <Route index element={<Navigate to="/admin/dashboard" replace />} />
             <Route path="dashboard" element={<div className="p-8 bg-white rounded-3xl font-bold text-slate-400 italic">Dashboard em breve...</div>} />
