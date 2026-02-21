@@ -91,12 +91,12 @@ export const Header = () => {
             >
                 {/* Logo Area */}
                 <div className="flex-1">
-                    <Link to="/" className="outline-none block max-w-[140px] md:max-w-[180px]">
+                    <Link to="/" className="outline-none block ">
                         {logoUrl ? (
                             <img 
                                 src={logoUrl} 
                                 alt="Anatilde" 
-                                className="h-10 md:h-12 w-auto object-contain transition-opacity duration-500"
+                                className=" transition-opacity duration-500"
                                 style={{ opacity: 1 }}
                             />
                         ) : (

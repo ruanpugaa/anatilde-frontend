@@ -54,13 +54,13 @@ export const Footer = () => {
                 className="grid grid-cols-1 lg:grid-cols-12 gap-16 lg:gap-8"
             >
                 <motion.div variants={{ hidden: { opacity: 0, y: 10 }, visible: { opacity: 1, y: 0 } }} className="lg:col-span-5 space-y-8">
-                    <Link to="/" className="outline-none block max-w-[200px]">
+                    <Link to="/" className="outline-none block ">
                         {logoUrl ? (
                             <img 
                                 key={logoUrl} 
                                 src={logoUrl} 
                                 alt="Anatilde" 
-                                className="h-14 w-auto object-contain grayscale opacity-60 hover:grayscale-0 transition-all duration-500" 
+                                className="mx-auto hover:grayscale-0 transition-all duration-500" 
                             />
                         ) : (
                             <span className="font-serif text-3xl tracking-tighter text-stone-800">
