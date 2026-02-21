@@ -5,18 +5,22 @@ import { useEffect } from 'react';
 
 // Layout & Components
 import { Header } from './components/layout/Header';
-import { Sidebar } from './components/layout/Sidebar';
+import { Sidebar } from './components/layout/Sidebar'; // O Carrinho
+import { WishlistSidebar } from './components/layout/WishListSideBar'; // STAFF: Novo Componente
 import { Footer } from './components/layout/Footer';
 import { NavigationHandler } from './components/functions/NavigationHandler';
 import { SEOManager } from './components/functions/SEOManager';
 
-// Pages & Views
+// Pages & Views Públicas
 import { Home } from './pages/Home';
 import { HomeNova } from './pages/HomeNova';
 import { Delicias } from './pages/Delicias';
 import { QuemSomos } from './pages/QuemSomos';
 import { Pascoa } from './pages/Pascoa';
 import { Contato } from './pages/Contato';
+import { Produto } from './pages/Produto';
+
+// Admin Views
 import { Admin } from './pages/Admin'; 
 import { PedidosView } from './modules/admin/views/PedidosView';
 import { NewsletterView } from './modules/admin/views/NewsletterView';
@@ -27,7 +31,7 @@ import { CategoriasView } from './modules/admin/views/CategoriasView';
 import { BannersView } from './modules/admin/views/BannersView';
 import { BannersFormView } from './modules/admin/views/BannersFormView';
 
-// Configuracoes
+// Configuracoes Admin
 import { ConfiguracoesLayout } from './modules/admin/views/configuracoes/ConfiguracoesLayout';
 import { AbaGeral } from './modules/admin/views/configuracoes/AbaGeral';
 import { AbaSEO } from './modules/admin/views/configuracoes/AbaSeo';
@@ -39,8 +43,8 @@ import api from './services/api';
 import { useCacheStore } from './store/useCacheStore';
 
 /**
- * Hook de Sincronização Staff
- * Monitora a versão do backend e invalida o cache local se necessário.
+ * STAFF: Hook de Sincronização de Cache
+ * Mantém a versão do app atualizada com o servidor para evitar stale data.
  */
 export const useCacheSync = () => {
     const setVersion = useCacheStore(state => state.setVersion);
@@ -48,30 +52,29 @@ export const useCacheSync = () => {
     useEffect(() => {
         const syncVersion = async () => {
             try {
-                // Rota atualizada para a nova estrutura de pastas
                 const { data } = await api.get('/core/get_cache_version.php');
-                
                 if (data.version) {
-                    // O setVersion no store já cuida da invalidação se a versão for diferente
                     setVersion(data.version);
                 }
             } catch (e) {
-                console.warn("[CacheSync] Falha ao sincronizar versão com o servidor.");
+                console.warn("[CacheSync] Falha ao sincronizar versão.");
             }
         };
-
         syncVersion();
-        
-        // Polling de 5 minutos para manter o cliente sempre atualizado com o Admin
         const interval = setInterval(syncVersion, 1000 * 60 * 5);
         return () => clearInterval(interval);
     }, [setVersion]);
 };
 
+/**
+ * STAFF: Layout Principal do Site
+ * Centraliza os elementos globais de UI (Modais, Sidebars, Overlays)
+ */
 const SiteLayout = () => (
   <div className="min-h-screen bg-white flex flex-col">
     <Header />
-    <Sidebar />
+    <Sidebar /> {/* Carrinho de Compras */}
+    <WishlistSidebar /> {/* STAFF: Lista de Desejos injetada globalmente */}
     <main className="flex-grow">
       <Outlet /> 
     </main>
@@ -80,7 +83,6 @@ const SiteLayout = () => (
 );
 
 function App() {
-  // Inicia a sincronização de versão logo no mount do App
   useCacheSync();
   
   return (
@@ -88,7 +90,14 @@ function App() {
       <SEOManager />
       <BrowserRouter>
         <NavigationHandler />
-        <Toaster position="top-right" richColors closeButton />
+        <Toaster 
+          position="top-right" 
+          richColors 
+          closeButton 
+          toastOptions={{
+            style: { borderRadius: '1rem', border: '1px solid #f5f5f4' },
+          }}
+        />
         
         <Routes>
           {/* SITE PÚBLICO */}
@@ -97,6 +106,10 @@ function App() {
             <Route path="/homenova" element={<HomeNova />} />
             <Route path="/delicias" element={<Delicias />} />
             <Route path="/delicias/:categorySlug?" element={<Delicias />} />
+            
+            {/* Detalhe do Produto */}
+            <Route path="/produto/:id" element={<Produto />} />
+            
             <Route path="/pascoa" element={<Pascoa />} />
             <Route path="/quem-somos" element={<QuemSomos />} /> 
             <Route path="/contato" element={<Contato />} />
@@ -105,7 +118,7 @@ function App() {
           {/* PAINEL ADMINISTRATIVO */}
           <Route path="/admin" element={<Admin />}>
             <Route index element={<Navigate to="/admin/dashboard" replace />} />
-            <Route path="dashboard" element={<div className="p-8 bg-white rounded-3xl font-bold text-slate-400">Dashboard em breve...</div>} />
+            <Route path="dashboard" element={<div className="p-8 bg-white rounded-3xl font-bold text-slate-400 italic">Dashboard em breve...</div>} />
             <Route path="pedidos" element={<PedidosView />} />
             <Route path="newsletter" element={<NewsletterView/>} />
             <Route path="banners" element={<BannersView />} />
@@ -116,7 +129,6 @@ function App() {
             <Route path="produtos/add" element={<ProdutosAddView />} /> 
             <Route path="produtos/edit/:id" element={<ProdutosEditView />} />
 
-            {/* CONFIGURAÇÕES ANINHADAS */}
             <Route path="configuracoes" element={<ConfiguracoesLayout />}>
               <Route index element={<Navigate to="geral" replace />} />
               <Route path="geral" element={<AbaGeral />} />
