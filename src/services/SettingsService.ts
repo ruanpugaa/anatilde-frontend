@@ -2,7 +2,7 @@ import { SettingsResponse } from '../@types/settings';
 import { useCacheStore } from '../store/useCacheStore';
 
 // STAFF INFRA: Centralização de caminhos
-const API_URL = 'https://anatilde.com.br/api';
+const API_URL = 'https://api.anatilde.com.br';
 const SETTINGS_CACHE_KEY = 'global_settings';
 
 export const SettingsService = {
