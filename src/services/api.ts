@@ -6,7 +6,7 @@ import { useCacheStore } from '../store/useCacheStore';
  */
 const api = axios.create({
     // O problema pode estar aqui se o app entender que TUDO abaixo de anatilde.com.br pertence à API
-    baseURL: 'https://anatilde.com.br/api',
+    baseURL: 'https://api.anatilde.com.br',
     timeout: 15000,
 });
 
