@@ -5,8 +5,9 @@ import { useEffect } from 'react';
 
 // Layout & Components
 import { Header } from './components/layout/Header';
-import { Sidebar } from './components/layout/Sidebar'; // O Carrinho
-import { WishlistSidebar } from './components/layout/WishListSideBar'; // STAFF: Novo Componente
+import { Sidebar } from './components/layout/Sidebar'; 
+// STAFF: Corrigido o casing para evitar erro de build na Vercel/Linux
+import { WishlistSidebar } from './components/layout/WishlistSidebar'; 
 import { Footer } from './components/layout/Footer';
 import { NavigationHandler } from './components/functions/NavigationHandler';
 import { SEOManager } from './components/functions/SEOManager';
@@ -73,8 +74,8 @@ export const useCacheSync = () => {
 const SiteLayout = () => (
   <div className="min-h-screen bg-white flex flex-col">
     <Header />
-    <Sidebar /> {/* Carrinho de Compras */}
-    <WishlistSidebar /> {/* STAFF: Lista de Desejos injetada globalmente */}
+    <Sidebar /> 
+    <WishlistSidebar /> 
     <main className="flex-grow">
       <Outlet /> 
     </main>
@@ -107,7 +108,6 @@ function App() {
             <Route path="/delicias" element={<Delicias />} />
             <Route path="/delicias/:categorySlug?" element={<Delicias />} />
             
-            {/* Detalhe do Produto */}
             <Route path="/produto/:id" element={<Produto />} />
             
             <Route path="/pascoa" element={<Pascoa />} />
