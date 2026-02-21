@@ -1,8 +1,8 @@
-import axios from 'axios';
+import api from './api'; 
 import { z } from 'zod';
 
 /**
- * SCHEMA DE VALIDAÇÃO (SSOT - Single Source of Truth)
+ * SCHEMA DE VALIDAÇÃO (SSOT)
  */
 export const newsletterSchema = z.object({
     name: z.string()
@@ -16,30 +16,26 @@ export const newsletterSchema = z.object({
 
 export type NewsletterData = z.infer<typeof newsletterSchema>;
 
-const API_URL = 'https://anatilde.com.br/api/newsletter.php';
-
 export const newsletterService = {
+    /**
+     * STAFF SYNC: Corrigido para apontar para o arquivo real /modules/forms/process_newsletter.php
+     */
     subscribe: async (data: NewsletterData): Promise<void> => {
         try {
-            // Runtime Validation
+            // 1. Validação em Runtime com Zod
             const validatedData = newsletterSchema.parse(data);
 
-            await axios.post(API_URL, validatedData, {
-                timeout: 10000, 
-                headers: {
-                    'Content-Type': 'application/json'
-                }
-            });
-        } catch (error) {
-            if (axios.isAxiosError(error)) {
-                console.error('API Error:', error.response?.data || error.message);
-            } else if (error instanceof z.ZodError) {
-                // CORREÇÃO: No Zod, usamos .issues para acessar a lista de erros
-                console.error('Validation Error:', error.issues);
-            } else {
-                console.error('Unexpected Error:', error);
+            // 2. Chamada para o endpoint correto
+            // STAFF FIX: O caminho real é este abaixo
+            await api.post('/modules/forms/process_newsletter.php', validatedData);
+
+        } catch (error: any) {
+            if (error instanceof z.ZodError) {
+                console.error('Validation Error (Zod):', error.issues);
+                throw new Error("Dados de inscrição inválidos.");
             }
             
+            // Repassa o erro para o componente tratar com toast
             throw error;
         }
     }

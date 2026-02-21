@@ -1,15 +1,16 @@
-import { ISettings, SettingsResponse } from '../@types/settings';
+import { SettingsResponse } from '../@types/settings';
 import { useCacheStore } from '../store/useCacheStore';
 
+// STAFF INFRA: Centralização de caminhos
 const API_URL = 'https://anatilde.com.br/api';
 const SETTINGS_CACHE_KEY = 'global_settings';
 
 export const SettingsService = {
     /**
      * Obtém todas as configurações com estratégia de Cache
+     * STAFF SYNC: Atualizado para o novo endpoint modular /settings/get.php
      */
     async getSettings(): Promise<SettingsResponse> {
-        // 1. Tenta recuperar do cache usando o Generics definido na tipagem
         const cachedData = useCacheStore.getState().getCache<SettingsResponse>(SETTINGS_CACHE_KEY);
         
         if (cachedData) {
@@ -17,12 +18,18 @@ export const SettingsService = {
         }
 
         try {
-            const response = await fetch(`${API_URL}/get_settings.php`);
-            if (!response.ok) throw new Error('Falha ao carregar configurações');
+            // Alterado da rota legada para a nova arquitetura modular
+            const response = await fetch(`${API_URL}/modules/settings/get.php`);
             
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.error || 'Falha ao carregar configurações globais');
+            }
+            
+            // Como o PHP usa FETCH_KEY_PAIR, o 'data' já é o objeto { key: value }
             const data: SettingsResponse = await response.json();
 
-            // 2. Alimenta o cache com o dado recém buscado
+            // Persiste no cache para otimizar performance do Header/Footer
             useCacheStore.getState().setCache(SETTINGS_CACHE_KEY, data);
 
             return data;
@@ -34,22 +41,24 @@ export const SettingsService = {
 
     /**
      * Atualiza as configurações e invalida o cache
+     * STAFF SYNC: Atualizado para o novo endpoint modular /settings/update.php
      */
-    async updateSettings(formData: FormData): Promise<{ status: string; paths?: any }> {
+    async updateSettings(formData: FormData): Promise<{ success: boolean; paths?: any }> {
         try {
-            const response = await fetch(`${API_URL}/settings.php`, {
+            const response = await fetch(`${API_URL}/modules/settings/update.php`, {
                 method: 'POST',
+                // IMPORTANTE: Ao usar FormData com fetch, NÃO defina Content-Type manual.
+                // O navegador fará isso automaticamente incluindo o boundary necessário.
                 body: formData,
             });
 
             const result = await response.json();
             
             if (!response.ok || result.error) {
-                throw new Error(result.error || 'Erro ao processar atualização');
+                throw new Error(result.error || 'Erro ao processar atualização no servidor');
             }
 
-            // 3. Invalidação de Cache: Após um update bem-sucedido, limpamos o cache 
-            // para garantir que a próxima leitura busque os dados atualizados do banco.
+            // Invalida o cache para forçar o sistema a ler os novos dados no próximo render
             useCacheStore.getState().invalidate(SETTINGS_CACHE_KEY);
 
             return result;

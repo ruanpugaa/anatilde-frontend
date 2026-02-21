@@ -4,47 +4,81 @@ import { useCacheStore } from '../store/useCacheStore';
 
 const PRODUCTS_CACHE_KEY = 'all_active_products';
 
+/**
+ * STAFF ARCHITECTURE: Product Service
+ * Responsável pela gestão de catálogo e integração com a nova API modular.
+ */
 export const productService = {
     /**
-     * Busca todos os produtos ativos com Cache-Aside inteligente.
-     * Filtra localmente para garantir performance extrema.
+     * Busca produtos ativos com Cache-Aside e Versionamento.
      */
-    async getAllActive(filters?: { category_id?: number }): Promise<Product[]> {
-        // 1. Tenta recuperar a lista mestre do cache
-        let products = useCacheStore.getState().getCache<Product[]>(PRODUCTS_CACHE_KEY);
+    async getAllActive(filters?: { category_id?: number | string }): Promise<Product[]> {
+        const cacheStore = useCacheStore.getState();
+        let products = cacheStore.getCache<Product[]>(PRODUCTS_CACHE_KEY);
 
         if (!products) {
-            // 2. Se não houver cache, busca na API
-            const { data } = await api.get<Product[]>('/products.php');
-            const rawProducts = Array.isArray(data) ? data : [];
-            
-            // Regra base: Apenas ativos (cacheamos apenas o que é útil para a loja)
-            products = rawProducts.filter(p => Number(p.active) === 1);
-
-            // 3. Alimenta o cache com a lista limpa
-            useCacheStore.getState().setCache(PRODUCTS_CACHE_KEY, products);
+            try {
+                const version = cacheStore.version;
+                // STAFF SYNC: Rota modularizada para listagem pública
+                const { data } = await api.get<Product[]>(`/modules/products/public_list.php?v=${version}`);
+                
+                products = Array.isArray(data) ? data : [];
+                cacheStore.setCache(PRODUCTS_CACHE_KEY, products);
+            } catch (error) {
+                console.error("Erro ao buscar produtos ativos:", error);
+                return [];
+            }
         }
 
-        // 4. Aplicação de filtros sobre o cache (Operação em memória, ultra rápida)
-        if (filters?.category_id) {
-            return products.filter(p => Number((p as any).category_id) === filters.category_id);
+        // Filtragem no Client-side para reduzir hits na API (Performance Staff Level)
+        if (filters?.category_id && filters.category_id !== 'all') {
+            return products.filter(p => String(p.category_id) === String(filters.category_id));
         }
 
         return products;
     },
 
     /**
-     * Busca por ID aproveitando o cache do getAllActive
+     * Busca detalhada (Admin/Single Product Page)
      */
-    async getById(id: number): Promise<Product | undefined> {
-        const products = await this.getAllActive();
-        return products.find(p => p.id === id);
+    async getById(id: number | string): Promise<Product | undefined> {
+        try {
+            // STAFF TIP: Para a página de produto ou edição no admin, 
+            // buscamos no cache primeiro, mas podemos ter um fallback para a API se necessário.
+            const products = await this.getAllActive();
+            return products.find(p => String(p.id) === String(id));
+        } catch (error) {
+            return undefined;
+        }
     },
 
     /**
-     * Invalida o cache de produtos. 
-     * Deve ser chamado após qualquer CREATE, UPDATE ou DELETE no Admin.
+     * Operações de Escrita (Admin)
      */
+    async save(formData: FormData): Promise<{ success: boolean; product?: Product }> {
+        try {
+            const { data } = await api.post('/modules/products/save.php', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
+            
+            this.invalidateCache();
+            return data;
+        } catch (error) {
+            console.error("Erro ao salvar produto:", error);
+            throw error;
+        }
+    },
+
+    async delete(id: number | string): Promise<void> {
+        try {
+            await api.delete(`/modules/products/delete.php?id=${id}`);
+            this.invalidateCache();
+        } catch (error) {
+            console.error("Erro ao deletar produto:", error);
+            throw error;
+        }
+    },
+
     invalidateCache(): void {
         useCacheStore.getState().invalidate(PRODUCTS_CACHE_KEY);
     }

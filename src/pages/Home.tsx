@@ -1,38 +1,52 @@
 import { useEffect, useState } from 'react';
 import { HeroSlider } from '../components/home/HeroSlider';
-import { BrandMarquee } from '../components/home/BrandMarquee';
 import { EasterCountdown } from '../components/home/EasterCountdown';
 import { ProductShelf } from '../components/common/ProductShelf';
 import { CategoryScroll } from '../components/home/CategoryScroll';
+import { Newsletter } from '../components/common/Newsletter';
 import { Product } from '../@types/product';
 import { productService } from '../services/productService';
-import { Newsletter } from '../components/common/Newsletter';
 
 export const Home = () => {
     const [products, setProducts] = useState<Product[]>([]);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        productService.getAllActive().then(setProducts);
+        let isMounted = true;
+
+        productService.getAllActive()
+            .then(data => {
+                if (isMounted) {
+                    setProducts(data);
+                    setLoading(false);
+                }
+            })
+            .catch(() => {
+                if (isMounted) setLoading(false);
+            });
+
+        return () => { isMounted = false; };
     }, []);
 
     return (
         <div className="bg-[#FFFCFB] w-full">
-            {/* 1. Header Dinâmico */}
             <HeroSlider />
             <EasterCountdown />
-            {/* 2. Prova Social / Autoridade */}
-            
 
-            {/* 3. Conversão Direta (Mais Vendidos) */}
-            <ProductShelf 
-                title="Mais Vendidos" 
-                subtitle="Favoritos" 
-                products={products} 
-            />
+            {/* Shelf de Produtos com Skeleton ou Empty State logic */}
+            {loading ? (
+                <div className="h-96 flex items-center justify-center text-slate-400">
+                    Carregando delícias...
+                </div>
+            ) : (
+                <ProductShelf 
+                    title="Mais Vendidos" 
+                    subtitle="Favoritos" 
+                    products={products.slice(0, 8)} // Staff Tip: Limita a shelf para performance
+                />
+            )}
 
-            {/* 4. Navegação por Experiência (Categorias) */}
             <CategoryScroll />
-
             <Newsletter />
         </div>
     );

@@ -1,8 +1,16 @@
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { Toaster } from 'sonner';
+import { HelmetProvider } from 'react-helmet-async';
+import { useEffect } from 'react';
+
+// Layout & Components
 import { Header } from './components/layout/Header';
 import { Sidebar } from './components/layout/Sidebar';
 import { Footer } from './components/layout/Footer';
+import { NavigationHandler } from './components/functions/NavigationHandler';
+import { SEOManager } from './components/functions/SEOManager';
+
+// Pages & Views
 import { Home } from './pages/Home';
 import { HomeNova } from './pages/HomeNova';
 import { Delicias } from './pages/Delicias';
@@ -19,41 +27,45 @@ import { CategoriasView } from './modules/admin/views/CategoriasView';
 import { BannersView } from './modules/admin/views/BannersView';
 import { BannersFormView } from './modules/admin/views/BannersFormView';
 
-// Importação do Layout de Configurações e suas Abas
+// Configuracoes
 import { ConfiguracoesLayout } from './modules/admin/views/configuracoes/ConfiguracoesLayout';
 import { AbaGeral } from './modules/admin/views/configuracoes/AbaGeral';
 import { AbaSEO } from './modules/admin/views/configuracoes/AbaSeo';
 import { AbaContato } from './modules/admin/views/configuracoes/AbaContato';
 import { AbaSocial } from './modules/admin/views/configuracoes/AbaSocial';
 
-import { HelmetProvider } from 'react-helmet-async';
-import { NavigationHandler } from './components/functions/NavigationHandler';
-import { SEOManager } from './components/functions/SEOManager';
-import { useEffect } from 'react';
+// Services & Store
 import api from './services/api';
 import { useCacheStore } from './store/useCacheStore';
 
+/**
+ * Hook de Sincronização Staff
+ * Monitora a versão do backend e invalida o cache local se necessário.
+ */
 export const useCacheSync = () => {
-    useEffect(() => {
-        const checkVersion = async () => {
-            try {
-                // Endpoint ultra-leve que lê o cache_version.txt
-                const { data } = await api.get('/get_cache_version.php');
-                const localVersion = localStorage.getItem('anatilde_cache_v');
+    const setVersion = useCacheStore(state => state.setVersion);
 
-                if (localVersion && data.version !== localVersion) {
-                    useCacheStore.getState().invalidate();
-                    console.warn("🔄 Dados atualizados pelo Admin. Cache renovado.");
+    useEffect(() => {
+        const syncVersion = async () => {
+            try {
+                // Rota atualizada para a nova estrutura de pastas
+                const { data } = await api.get('/core/get_cache_version.php');
+                
+                if (data.version) {
+                    // O setVersion no store já cuida da invalidação se a versão for diferente
+                    setVersion(data.version);
                 }
-                localStorage.setItem('anatilde_cache_v', data.version);
-            } catch (e) { /* silent */ }
+            } catch (e) {
+                console.warn("[CacheSync] Falha ao sincronizar versão com o servidor.");
+            }
         };
 
-        checkVersion();
-        // Opcional: checar a cada 5 minutos
-        const interval = setInterval(checkVersion, 1000 * 60 * 5);
+        syncVersion();
+        
+        // Polling de 5 minutos para manter o cliente sempre atualizado com o Admin
+        const interval = setInterval(syncVersion, 1000 * 60 * 5);
         return () => clearInterval(interval);
-    }, []);
+    }, [setVersion]);
 };
 
 const SiteLayout = () => (
@@ -68,7 +80,7 @@ const SiteLayout = () => (
 );
 
 function App() {
-
+  // Inicia a sincronização de versão logo no mount do App
   useCacheSync();
   
   return (
@@ -79,7 +91,7 @@ function App() {
         <Toaster position="top-right" richColors closeButton />
         
         <Routes>
-          {/* ROTAS DO SITE PÚBLICO */}
+          {/* SITE PÚBLICO */}
           <Route element={<SiteLayout />}>
             <Route path="/" element={<Home />} />
             <Route path="/homenova" element={<HomeNova />} />
@@ -90,10 +102,9 @@ function App() {
             <Route path="/contato" element={<Contato />} />
           </Route>
 
-          {/* ROTAS DO ADMIN */}
+          {/* PAINEL ADMINISTRATIVO */}
           <Route path="/admin" element={<Admin />}>
             <Route index element={<Navigate to="/admin/dashboard" replace />} />
-            
             <Route path="dashboard" element={<div className="p-8 bg-white rounded-3xl font-bold text-slate-400">Dashboard em breve...</div>} />
             <Route path="pedidos" element={<PedidosView />} />
             <Route path="newsletter" element={<NewsletterView/>} />
@@ -105,7 +116,7 @@ function App() {
             <Route path="produtos/add" element={<ProdutosAddView />} /> 
             <Route path="produtos/edit/:id" element={<ProdutosEditView />} />
 
-            {/* ESTRUTURA DE CONFIGURAÇÕES EM ROTAS ANINHADAS */}
+            {/* CONFIGURAÇÕES ANINHADAS */}
             <Route path="configuracoes" element={<ConfiguracoesLayout />}>
               <Route index element={<Navigate to="geral" replace />} />
               <Route path="geral" element={<AbaGeral />} />

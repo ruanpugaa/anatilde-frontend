@@ -1,32 +1,49 @@
-import { useState, useEffect, useRef } from 'react';
-import axios from 'axios';
+import { useState, useEffect, useMemo } from 'react';
 import { 
-    Plus, Edit3, Trash2, Tag, Filter, 
-    ChevronDown, Check, X, Loader2, Eye, EyeOff 
+    Plus, Edit3, Trash2, Loader2, Eye, EyeOff, Filter, ChevronDown 
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
+import api from '../../../services/api';
+import { Product } from '../../../@types/product';
+
 export const ProdutosListaView = () => {
-    const [produtos, setProdutos] = useState<any[]>([]);
+    const navigate = useNavigate();
+    
+    // States
+    const [produtos, setProdutos] = useState<Product[]>([]);
     const [categorias, setCategorias] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [filtroCategoria, setFiltroCategoria] = useState<string>('todos');
-    const [isOpen, setIsOpen] = useState(false);
-    const dropdownRef = useRef<HTMLDivElement>(null);
-    const navigate = useNavigate();
+
+    /**
+     * STAFF SANITIZER
+     * Resolve o conflito de paths EN/PT e remove prefixos de API injetados pelo backend
+     */
+    const resolveProductImage = (path: string | null) => {
+        if (!path) return 'https://placehold.co/600x400?text=Sem+Imagem';
+        
+        const cleanPath = path
+            .replace('https://anatilde.com.br/api/', '')
+            .replace('https://anatilde.com.br/', '')
+            .replace('api/uploads/', 'uploads/')
+            .replace(/products\//g, 'produtos/') // Regex global para garantir a troca
+            .replace(/^\/+/, '');
+
+        return `https://anatilde.com.br/${cleanPath}`;
+    };
 
     const fetchData = async () => {
         try {
             const [resProds, resCats] = await Promise.all([
-                axios.get('https://anatilde.com.br/api/admin_produtos.php'),
-                axios.get('https://anatilde.com.br/api/admin_categorias.php')
+                api.get('/modules/products/admin_list.php'),
+                api.get('/modules/categories/categories.php')
             ]);
-            // Garantimos que os dados cheguem com o formato correto
             setProdutos(Array.isArray(resProds.data) ? resProds.data : []);
             setCategorias(Array.isArray(resCats.data) ? resCats.data : []);
         } catch (err) {
-            toast.error("Erro ao carregar dados");
+            toast.error("Erro ao sincronizar dados com o servidor.");
         } finally {
             setLoading(false);
         }
@@ -34,207 +51,132 @@ export const ProdutosListaView = () => {
 
     useEffect(() => {
         fetchData();
-        const handleClickOutside = (event: MouseEvent) => {
-            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-                setIsOpen(false);
-            }
-        };
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    const toggleStatus = async (id: number, currentStatus: any) => {
-        // Converte para número para garantir a lógica
-        const statusAtual = Number(currentStatus);
-        const newStatus = statusAtual === 1 ? 0 : 1;
-        
-        try {
-            const res = await axios.post('https://anatilde.com.br/api/admin_produtos_status.php', {
-                id,
-                active: newStatus
-            });
+    // Memoização dos produtos filtrados para evitar re-calculo desnecessário no render
+    const produtosFiltrados = useMemo(() => {
+        return filtroCategoria === 'todos' 
+            ? produtos 
+            : produtos.filter(p => String(p.category_id) === filtroCategoria);
+    }, [produtos, filtroCategoria]);
 
+    const handleToggleStatus = async (id: number | string, currentStatus: any) => {
+        const newStatus = Number(currentStatus) === 1 ? 0 : 1;
+        try {
+            const res = await api.post('/modules/products/status.php', { id, active: newStatus });
             if (res.data.success) {
                 setProdutos(prev => prev.map(p => p.id === id ? { ...p, active: newStatus } : p));
-                toast.success(newStatus === 1 ? "Produto visível na loja" : "Produto oculto na loja");
+                toast.success("Visibilidade atualizada");
             }
         } catch (error) {
-            toast.error("Erro ao alterar visibilidade");
+            toast.error("Erro ao alterar status.");
         }
     };
 
-    const handleDelete = async (id: number, name: string) => {
-        const confirmar = window.confirm(`Tem certeza que deseja excluir o produto "${name}"?`);
-        
-        if (confirmar) {
-            const toastId = toast.loading("Excluindo produto...");
-            try {
-                const formData = new FormData();
-                formData.append('id', String(id));
-                const res = await axios.post('https://anatilde.com.br/api/admin_produtos_delete.php', formData);
+    const handleDelete = async (id: number | string, name: string) => {
+        if (!window.confirm(`Tem certeza que deseja excluir "${name}"?`)) return;
 
-                if (res.data.success) {
-                    toast.success("Produto removido com sucesso!", { id: toastId });
-                    setProdutos(prev => prev.filter(p => p.id !== id));
-                } else {
-                    toast.error(res.data.message || "Erro ao excluir", { id: toastId });
-                }
-            } catch (error) {
-                toast.error("Erro de conexão com o servidor", { id: toastId });
+        try {
+            const res = await api.post('/modules/products/delete.php', { id });
+            if (res.data.success) {
+                setProdutos(prev => prev.filter(p => p.id !== id));
+                toast.success("Produto removido com sucesso");
             }
+        } catch (error) {
+            toast.error("Erro ao excluir produto.");
         }
     };
 
-    const produtosFiltrados = filtroCategoria === 'todos' 
-        ? produtos 
-        : produtos.filter(p => String(p.category_id) === filtroCategoria);
-
-    const nomeCategoriaAtiva = categorias.find(c => String(c.id) === filtroCategoria)?.name || 'Todos';
-
-    if (loading) return (
-        <div className="flex flex-col items-center justify-center p-20 space-y-4">
-            <Loader2 className="animate-spin text-pink-500" size={40} />
-            <p className="text-slate-400 font-bold">Carregando catálogo...</p>
-        </div>
-    );
+    if (loading) {
+        return (
+            <div className="flex h-96 items-center justify-center">
+                <Loader2 className="animate-spin text-pink-500" size={40} />
+            </div>
+        );
+    }
 
     return (
-        <div className="space-y-6">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm gap-4">
+        <div className="space-y-8 p-2">
+            {/* Header Section */}
+            <header className="flex flex-col md:flex-row justify-between items-start md:items-center bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm gap-4">
                 <div>
-                    <h2 className="text-2xl font-black text-slate-800 tracking-tight">Produtos</h2>
-                    <p className="text-slate-400 text-sm font-medium">Gerencie seu catálogo de delícias</p>
+                    <h2 className="text-2xl font-black text-slate-800 tracking-tight">Catálogo de Produtos</h2>
+                    <p className="text-slate-400 text-sm font-medium">Gerencie o inventário e visibilidade da loja</p>
                 </div>
+                <Link 
+                    to="/admin/produtos/add" 
+                    className="flex items-center gap-2 bg-slate-900 hover:bg-pink-600 text-white px-8 py-4 rounded-2xl font-bold transition-all shadow-lg shadow-slate-200"
+                >
+                    <Plus size={20} /> Novo Produto
+                </Link>
+            </header>
 
-                <div className="flex items-center gap-3 w-full md:w-auto">
-                    <div className="relative" ref={dropdownRef}>
-                        <button 
-                            onClick={() => setIsOpen(!isOpen)}
-                            className={`flex items-center gap-3 px-5 py-3 rounded-2xl font-bold text-sm transition-all border ${
-                                filtroCategoria !== 'todos' 
-                                ? 'bg-pink-50 border-pink-100 text-pink-600' 
-                                : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
-                            }`}
-                        >
-                            <Filter size={18} />
-                            {filtroCategoria === 'todos' ? 'Filtrar' : nomeCategoriaAtiva}
-                            <ChevronDown size={16} className={`transition-transform ${isOpen ? 'rotate-180' : ''}`} />
-                        </button>
+            {/* Grid de Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {produtosFiltrados.map((prod) => {
+                    const isActive = Number(prod.active) === 1;
+                    
+                    return (
+                        <div key={prod.id} className={`bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden flex flex-col group hover:shadow-xl transition-all duration-300 ${!isActive ? 'opacity-80' : ''}`}>
+                            {/* Imagem */}
+                            <div className="h-64 bg-slate-50 relative overflow-hidden">
+                                <img 
+                                    src={resolveProductImage(prod.image_url)} 
+                                    alt={prod.name} 
+                                    className={`w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 ${!isActive ? 'grayscale' : ''}`}
+                                    loading="lazy"
+                                    onError={(e) => {
+                                        const target = e.target as HTMLImageElement;
+                                        if (!target.src.includes('placehold.co')) {
+                                            target.src = 'https://placehold.co/600x400?text=Erro+no+Caminho';
+                                        }
+                                    }}
+                                />
+                                {!isActive && (
+                                    <div className="absolute top-4 right-4 bg-slate-900/80 backdrop-blur-md text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase">
+                                        Oculto
+                                    </div>
+                                )}
+                            </div>
 
-                        {isOpen && (
-                            <div className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-slate-100 z-[100] overflow-hidden animate-in fade-in zoom-in duration-200">
-                                <div className="p-2 max-h-64 overflow-y-auto">
-                                    <button 
-                                        onClick={() => { setFiltroCategoria('todos'); setIsOpen(false); }}
-                                        className="w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-bold hover:bg-slate-50 text-slate-700"
-                                    >
-                                        Ver Todos
-                                        {filtroCategoria === 'todos' && <Check size={16} className="text-pink-500" />}
-                                    </button>
-                                    <div className="h-px bg-slate-50 my-1" />
-                                    {categorias.map(cat => (
+                            {/* Conteúdo */}
+                            <div className="p-8 flex-grow flex flex-col">
+                                <h3 className="font-bold text-slate-800 text-lg mb-2 leading-tight">{prod.name}</h3>
+                                <p className="text-slate-400 text-xs mb-6 line-clamp-2 h-8">{prod.description}</p>
+                                
+                                <div className="mt-auto flex justify-between items-center">
+                                    <div className="flex flex-col">
+                                        <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Preço</span>
+                                        <span className="text-slate-900 font-black text-xl italic">R$ {Number(prod.price).toFixed(2)}</span>
+                                    </div>
+
+                                    <div className="flex gap-2">
                                         <button 
-                                            key={cat.id}
-                                            onClick={() => { setFiltroCategoria(String(cat.id)); setIsOpen(false); }}
-                                            className="w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-bold hover:bg-slate-50 text-slate-700"
+                                            onClick={() => handleToggleStatus(prod.id, prod.active)} 
+                                            className="p-3 bg-slate-50 hover:bg-pink-50 rounded-2xl transition-colors"
+                                            title={isActive ? "Ocultar produto" : "Exibir produto"}
                                         >
-                                            {cat.name}
-                                            {filtroCategoria === String(cat.id) && <Check size={16} className="text-pink-500" />}
+                                            {isActive ? <Eye size={20} className="text-pink-500" /> : <EyeOff size={20} className="text-slate-400" />}
                                         </button>
-                                    ))}
+                                        <button 
+                                            onClick={() => navigate(`/admin/produtos/edit/${prod.id}`)} 
+                                            className="p-3 bg-slate-50 hover:bg-slate-900 hover:text-white rounded-2xl transition-all"
+                                        >
+                                            <Edit3 size={20} />
+                                        </button>
+                                        <button 
+                                            onClick={() => handleDelete(prod.id, prod.name)} 
+                                            className="p-3 bg-slate-50 hover:bg-red-500 hover:text-white rounded-2xl transition-all"
+                                        >
+                                            <Trash2 size={20} />
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
-                        )}
-                    </div>
-
-                    <Link to="/admin/produtos/add" className="flex-1 md:flex-none bg-slate-900 text-white px-6 py-3 rounded-2xl text-sm font-bold hover:bg-pink-600 transition-all flex items-center justify-center gap-2 shadow-lg shadow-slate-200">
-                        <Plus size={18} /> Novo
-                    </Link>
-                </div>
+                        </div>
+                    );
+                })}
             </div>
-
-            {produtosFiltrados.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {produtosFiltrados.map((prod) => {
-                        // Garantimos que 'active' seja tratado como número
-                        const isAtivo = Number(prod.active) === 1;
-
-                        return (
-                            <div key={prod.id} className={`bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden flex flex-col group hover:shadow-xl hover:shadow-slate-200/50 transition-all duration-300 ${!isAtivo ? 'opacity-75' : ''}`}>
-                                <div className="h-56 bg-slate-50 relative overflow-hidden">
-                                    <img 
-                                        src={prod.image_url?.startsWith('http') ? prod.image_url : `https://anatilde.com.br/uploads/produtos/${prod.image_url}`} 
-                                        alt={prod.name} 
-                                        className={`w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ${!isAtivo ? 'grayscale' : ''}`} 
-                                        onError={(e) => { (e.target as HTMLImageElement).src = 'https://placehold.co/600x400?text=Sem+Imagem' }}
-                                    />
-                                    <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-md px-3 py-1.5 rounded-full flex items-center gap-2 shadow-sm border border-white/20">
-                                        <Tag size={12} className="text-pink-500" />
-                                        <span className="text-[10px] font-black uppercase tracking-wider text-slate-700">
-                                            {categorias.find(c => String(c.id) === String(prod.category_id))?.name || 'SEM CATEGORIA'}
-                                        </span>
-                                    </div>
-                                    
-                                    {!isAtivo && (
-                                        <div className="absolute inset-0 bg-slate-900/40 flex items-center justify-center">
-                                            <span className="bg-white text-slate-900 px-4 py-1 rounded-full text-xs font-black uppercase tracking-widest shadow-lg">Inativo</span>
-                                        </div>
-                                    )}
-                                </div>
-
-                                <div className="p-8 flex-grow flex flex-col">
-                                    <h3 className="font-bold text-slate-800 text-lg leading-tight mb-2">{prod.name}</h3>
-                                    <p className="text-slate-400 text-xs line-clamp-2 mb-6 h-8">{prod.description}</p>
-                                    
-                                    <div className="flex justify-between items-center mt-auto">
-                                        <div className="flex flex-col">
-                                            <span className="text-[10px] font-black text-slate-300 uppercase">Preço</span>
-                                            <span className="text-slate-900 font-black text-xl">R$ {Number(prod.price).toFixed(2)}</span>
-                                        </div>
-                                        
-                                        <div className="flex gap-2 relative z-10">
-                                            <button 
-                                                onClick={() => toggleStatus(prod.id, prod.active)}
-                                                className={`p-3 transition-all rounded-2xl ${
-                                                    isAtivo 
-                                                    ? 'text-pink-500 bg-pink-50 hover:bg-pink-100' 
-                                                    : 'text-slate-400 bg-slate-100 hover:bg-slate-200'
-                                                }`}
-                                                title={isAtivo ? "Ocultar da loja" : "Mostrar na loja"}
-                                            >
-                                                {isAtivo ? <Eye size={18} /> : <EyeOff size={18} />}
-                                            </button>
-
-                                            <button 
-                                                onClick={() => navigate(`/admin/produtos/edit/${prod.id}`)}
-                                                className="p-3 text-slate-400 hover:text-white hover:bg-slate-900 transition-all bg-slate-50 rounded-2xl"
-                                                title="Editar"
-                                            >
-                                                <Edit3 size={18} />
-                                            </button>
-                                            <button 
-                                                onClick={() => handleDelete(prod.id, prod.name)}
-                                                className="p-3 text-slate-400 hover:text-white hover:bg-red-500 transition-all bg-slate-50 rounded-2xl"
-                                                title="Excluir"
-                                            >
-                                                <Trash2 size={18} />
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        );
-                    })}
-                </div>
-            ) : (
-                <div className="bg-white p-20 rounded-[3rem] text-center border border-slate-100 shadow-sm">
-                    <div className="bg-slate-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-300">
-                        <Filter size={40} />
-                    </div>
-                    <h3 className="text-slate-800 font-black text-xl">Nenhum produto em "{nomeCategoriaAtiva}"</h3>
-                    <button onClick={() => setFiltroCategoria('todos')} className="mt-4 text-pink-500 font-bold hover:underline">Limpar filtros</button>
-                </div>
-            )}
         </div>
     );
 };

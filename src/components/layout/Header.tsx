@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence, Variants } from 'framer-motion';
 import { ShoppingBag, Menu, X } from 'lucide-react';
 import { useScrollDirection } from '../../hooks/useScrollDirection';
@@ -8,25 +8,38 @@ import { Link, useLocation } from 'react-router-dom';
 
 export const Header = () => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
-    const settings = useSettings();
+    
+    // STAFF FIX: O hook retorna um objeto { settings, loading }, precisamos desestruturar
+    const { settings } = useSettings(); 
+    
     const scrollDir = useScrollDirection();
     const location = useLocation();
     const { toggleSidebar, items } = useCartStore();
     const itemCount = items.reduce((acc, item) => acc + item.quantity, 0);
 
-    // Fecha o menu automaticamente ao navegar
     useEffect(() => {
         setIsMenuOpen(false);
     }, [location]);
 
-    // Lock scroll quando o menu mobile está aberto
     useEffect(() => {
-        if (isMenuOpen) {
-            document.body.style.overflow = 'hidden';
-        } else {
-            document.body.style.overflow = 'unset';
-        }
+        document.body.style.overflow = isMenuOpen ? 'hidden' : 'unset';
     }, [isMenuOpen]);
+
+    /**
+     * STAFF SANITIZER: Unificando a lógica de imagem para o Logo
+     */
+    const logoUrl = useMemo(() => {
+        if (!settings?.site_logo) return null;
+
+        const path = settings.site_logo;
+        const cleanPath = path
+            .replace('https://anatilde.com.br/api/', '')
+            .replace('https://anatilde.com.br/', '')
+            .replace('api/uploads/', 'uploads/')
+            .replace(/^\/+/, '');
+
+        return `https://anatilde.com.br/${cleanPath}`;
+    }, [settings?.site_logo]);
 
     if (!settings) {
         return <div className="fixed top-0 w-full z-50 bg-white/90 backdrop-blur-xl border-b border-stone-100/50 h-24" />;
@@ -40,36 +53,10 @@ export const Header = () => {
         { name: 'Contato', path: '/contato' },
     ];
 
-    const getLogoUrl = () => {
-        if (!settings.site_logo) return null;
-        const cleanPath = settings.site_logo.replace(/^\//, ''); 
-        return `https://anatilde.com.br/${cleanPath}`;
-    };
-
-    const logoUrl = getLogoUrl();
-
-    // STAFF DEFINITION: Variantes tipadas para evitar erro de inferência do TS
+    // Variantes de animação
     const menuVariants: Variants = {
-        closed: { 
-            x: "100%",
-            transition: {
-                type: "spring",
-                stiffness: 400,
-                damping: 40,
-                staggerChildren: 0.05,
-                staggerDirection: -1
-            }
-        },
-        open: { 
-            x: 0,
-            transition: { 
-                type: "spring",
-                stiffness: 300,
-                damping: 30,
-                staggerChildren: 0.1,
-                delayChildren: 0.2
-            }
-        }
+        closed: { x: "100%", transition: { type: "spring", stiffness: 400, damping: 40, staggerChildren: 0.05, staggerDirection: -1 } },
+        open: { x: 0, transition: { type: "spring", stiffness: 300, damping: 30, staggerChildren: 0.1, delayChildren: 0.2 } }
     };
 
     const itemVariants: Variants = {
@@ -93,8 +80,12 @@ export const Header = () => {
                                 key={logoUrl}
                                 src={logoUrl} 
                                 alt="Anatilde" 
-                                className="h-10 md:h-12 w-auto object-contain transition-opacity duration-300"
+                                className="h-10 md:h-12 w-auto object-contain transition-opacity duration-500"
                                 onLoad={(e) => (e.currentTarget.style.opacity = "1")}
+                                onError={(e) => {
+                                    // Se falhar o logo custom, esconde a img para mostrar o fallback de texto
+                                    e.currentTarget.style.display = 'none';
+                                }}
                                 style={{ opacity: 0 }}
                             />
                         ) : (
@@ -133,7 +124,6 @@ export const Header = () => {
                         )}
                     </button>
 
-                    {/* Mobile Menu Trigger */}
                     <button 
                         onClick={() => setIsMenuOpen(true)}
                         className="md:hidden p-2 text-stone-800 hover:text-pink-500 transition-colors"
@@ -153,47 +143,30 @@ export const Header = () => {
                         exit="closed"
                         className="fixed inset-0 z-[60] bg-white flex flex-col px-8 py-10"
                     >
+                        {/* ... Resto do seu menu mobile ... */}
                         <div className="flex justify-between items-center mb-16">
                             <span className="text-[10px] uppercase tracking-[0.4em] font-bold text-stone-400">Navegação</span>
-                            <button 
-                                onClick={() => setIsMenuOpen(false)}
-                                className="p-2 bg-stone-50 rounded-full text-stone-900 hover:bg-stone-100 transition-colors"
-                            >
+                            <button onClick={() => setIsMenuOpen(false)} className="p-2 bg-stone-50 rounded-full text-stone-900 hover:bg-stone-100 transition-colors">
                                 <X size={28} strokeWidth={1} />
                             </button>
                         </div>
-
                         <nav className="flex flex-col gap-6">
                             {navLinks.map((link, idx) => (
                                 <motion.div key={link.path} variants={itemVariants}>
-                                    <Link 
-                                        to={link.path}
-                                        className="group flex items-baseline gap-4"
-                                    >
-                                        <span className="text-stone-300 text-xs font-bold font-mono">
-                                            0{idx + 1}
-                                        </span>
-                                        <span className={`text-4xl md:text-5xl font-serif tracking-tight transition-colors duration-300
-                                            ${location.pathname === link.path ? 'text-pink-500' : 'text-stone-800 group-hover:text-pink-500'}`}
-                                        >
+                                    <Link to={link.path} className="group flex items-baseline gap-4">
+                                        <span className="text-stone-300 text-xs font-bold font-mono">0{idx + 1}</span>
+                                        <span className={`text-4xl md:text-5xl font-serif tracking-tight transition-colors duration-300 ${location.pathname === link.path ? 'text-pink-500' : 'text-stone-800 group-hover:text-pink-500'}`}>
                                             {link.name}
                                         </span>
                                     </Link>
                                 </motion.div>
                             ))}
                         </nav>
-
-                        <motion.div 
-                            variants={itemVariants}
-                            className="mt-auto pt-10 border-t border-stone-100 flex flex-col gap-6"
-                        >
+                        {/* Rodapé Mobile */}
+                        <motion.div variants={itemVariants} className="mt-auto pt-10 border-t border-stone-100 flex flex-col gap-6">
                             <div className="flex flex-col gap-1">
                                 <span className="text-[10px] uppercase tracking-widest text-stone-400 font-bold">Atendimento</span>
-                                <a href="https://wa.me/seunumeroaqui" className="text-stone-800 font-medium hover:text-pink-500 transition-colors">WhatsApp Anatilde</a>
-                            </div>
-                            <div className="flex gap-6">
-                                <a href="#" className="text-sm font-bold text-stone-800 hover:text-pink-500 transition-colors">Instagram</a>
-                                <a href="#" className="text-sm font-bold text-stone-800 hover:text-pink-500 transition-colors">Facebook</a>
+                                <a href={`https://wa.me/${settings?.whatsapp_number || ''}`} className="text-stone-800 font-medium hover:text-pink-500 transition-colors">WhatsApp Anatilde</a>
                             </div>
                         </motion.div>
                     </motion.div>

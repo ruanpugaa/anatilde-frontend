@@ -1,18 +1,16 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Instagram, Facebook, Save, Loader2 } from 'lucide-react';
+import { Instagram, Facebook, Save, Loader2, Globe } from 'lucide-react';
 import { toast } from 'sonner';
 
-// Infraestrutura Staff
-import { SettingsService } from '../../../../services/SettingsService';
-import { ISettings } from '../../../../@types/settings';
+// STAFF INFRA
+import api from '../../../../services/api';
 
 export const AbaSocial = () => {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     
-    // Estado utilizando a interface global
-    const [social, setSocial] = useState<Partial<ISettings>>({ 
+    const [social, setSocial] = useState({ 
         instagram_url: '', 
         facebook_url: '' 
     });
@@ -20,13 +18,15 @@ export const AbaSocial = () => {
     useEffect(() => {
         const loadSocial = async () => {
             try {
-                const data = await SettingsService.getSettings();
+                // STAFF PATTERN: Consumindo do endpoint de configurações globais
+                const res = await api.get('/modules/settings/get.php');
+                const data = res.data;
                 setSocial({
                     instagram_url: data.instagram_url || '',
                     facebook_url: data.facebook_url || ''
                 });
             } catch (err) {
-                toast.error("Erro ao carregar redes sociais");
+                toast.error("Falha ao sincronizar redes sociais.");
             } finally {
                 setLoading(false);
             }
@@ -37,81 +37,95 @@ export const AbaSocial = () => {
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
         setSaving(true);
-
-        const formData = new FormData();
-        if (social.instagram_url) formData.append('instagram_url', social.instagram_url);
-        if (social.facebook_url) formData.append('facebook_url', social.facebook_url);
+        const tid = toast.loading("Atualizando ecossistema social...");
 
         try {
-            await SettingsService.updateSettings(formData);
-            toast.success("Redes sociais atualizadas!");
+            const formData = new FormData();
+            formData.append('instagram_url', social.instagram_url);
+            formData.append('facebook_url', social.facebook_url);
+
+            const res = await api.post('/modules/settings/update.php', formData);
+            
+            if (res.data.success) {
+                toast.success("Presença digital atualizada!", { id: tid });
+            }
         } catch (err: any) {
-            toast.error(err.message || "Erro ao salvar redes sociais");
+            toast.error(err.friendlyMessage || "Erro ao salvar configurações", { id: tid });
         } finally {
             setSaving(false);
         }
     };
 
     if (loading) return (
-        <div className="h-64 flex items-center justify-center">
+        <div className="h-64 flex flex-col items-center justify-center gap-3">
             <Loader2 className="animate-spin text-pink-500" size={32} />
+            <p className="text-stone-400 font-black text-[10px] uppercase tracking-widest">Conectando APIs...</p>
         </div>
     );
 
     return (
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-            <form onSubmit={handleSave} className="bg-white p-8 rounded-3xl border border-slate-200 space-y-6 shadow-sm">
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+            <form onSubmit={handleSave} className="bg-white p-8 rounded-[2.5rem] border border-stone-100 space-y-8 shadow-sm">
                 
                 <div className="space-y-6">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 block mb-2">Links das Redes Sociais</label>
+                    <header>
+                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-stone-400 block mb-1">Canais Oficiais</label>
+                        <p className="text-stone-500 text-sm font-medium">Links diretos para as páginas da Ana Tilde.</p>
+                    </header>
                     
                     {/* Instagram */}
-                    <div className="flex items-center gap-4 group">
-                        <div className="w-12 h-12 rounded-xl bg-pink-50 flex items-center justify-center text-pink-500 shrink-0 group-focus-within:bg-pink-500 group-focus-within:text-white transition-all">
-                            <Instagram size={20} />
+                    <div className="flex items-center gap-5 group">
+                        <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-yellow-100 via-pink-100 to-purple-100 flex items-center justify-center text-pink-600 shrink-0 group-focus-within:shadow-lg group-focus-within:shadow-pink-100 transition-all duration-500">
+                            <Instagram size={24} />
                         </div>
-                        <div className="flex-1">
+                        <div className="flex-1 space-y-1">
+                            <span className="text-[9px] font-black text-stone-300 uppercase ml-1">Instagram URL</span>
                             <input 
                                 type="url" 
                                 placeholder="https://instagram.com/anatilde" 
                                 value={social.instagram_url} 
                                 onChange={e => setSocial({...social, instagram_url: e.target.value})} 
-                                className="w-full bg-slate-50 border-none rounded-xl py-4 px-6 text-sm font-medium outline-none focus:ring-2 focus:ring-pink-500/20 transition-all" 
+                                className="w-full bg-stone-50 border-none rounded-2xl py-4 px-6 text-sm font-bold text-stone-700 outline-none focus:ring-2 focus:ring-pink-200 transition-all placeholder:text-stone-300" 
                             />
                         </div>
                     </div>
 
                     {/* Facebook */}
-                    <div className="flex items-center gap-4 group">
-                        <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 shrink-0 group-focus-within:bg-blue-600 group-focus-within:text-white transition-all">
-                            <Facebook size={20} />
+                    <div className="flex items-center gap-5 group">
+                        <div className="w-14 h-14 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-600 shrink-0 group-focus-within:shadow-lg group-focus-within:shadow-blue-100 transition-all duration-500">
+                            <Facebook size={24} />
                         </div>
-                        <div className="flex-1">
+                        <div className="flex-1 space-y-1">
+                            <span className="text-[9px] font-black text-stone-300 uppercase ml-1">Facebook URL</span>
                             <input 
                                 type="url" 
                                 placeholder="https://facebook.com/anatilde" 
                                 value={social.facebook_url} 
                                 onChange={e => setSocial({...social, facebook_url: e.target.value})} 
-                                className="w-full bg-slate-50 border-none rounded-xl py-4 px-6 text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500/10 transition-all" 
+                                className="w-full bg-stone-50 border-none rounded-2xl py-4 px-6 text-sm font-bold text-stone-700 outline-none focus:ring-2 focus:ring-blue-100 transition-all placeholder:text-stone-300" 
                             />
                         </div>
                     </div>
                 </div>
 
-                <div className="flex justify-end pt-4">
+                <div className="flex justify-end border-t border-stone-50 pt-6">
                     <button 
                         type="submit" 
                         disabled={saving} 
-                        className="bg-slate-900 text-white px-10 py-4 rounded-2xl font-bold text-sm hover:bg-pink-500 transition-all flex items-center gap-3 shadow-xl shadow-slate-100 disabled:opacity-50"
+                        className="bg-stone-900 text-white px-10 py-4 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-pink-600 transition-all flex items-center gap-3 shadow-xl shadow-stone-200 disabled:opacity-50 active:scale-95"
                     >
-                        {saving ? <Loader2 className="animate-spin" size={18} /> : <><Save size={18} /> Salvar Redes Sociais</>}
+                        {saving ? <Loader2 className="animate-spin" size={18} /> : <><Save size={18} /> Salvar Presença Social</>}
                     </button>
                 </div>
             </form>
             
-            <div className="mt-6 p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                <p className="text-[11px] text-slate-400 text-center italic">
-                    Estes links serão utilizados nos ícones do cabeçalho e rodapé do site.
+            <div className="p-6 bg-stone-900 rounded-[2rem] border border-stone-800 flex items-center gap-4">
+                <div className="w-10 h-10 rounded-xl bg-stone-800 flex items-center justify-center text-pink-500">
+                    <Globe size={20} />
+                </div>
+                <p className="text-[11px] text-stone-400 font-medium leading-relaxed">
+                    <strong className="text-white block uppercase tracking-widest mb-0.5">Nota de Implantação:</strong>
+                    Certifique-se de incluir o protocolo <span className="text-pink-400 font-mono">https://</span> para garantir que os redirecionamentos externos funcionem em todos os navegadores.
                 </p>
             </div>
         </motion.div>
