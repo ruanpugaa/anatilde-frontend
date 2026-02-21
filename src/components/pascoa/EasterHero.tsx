@@ -48,7 +48,7 @@ export const EasterHero = ({ onScrollRequest }: EasterHeroProps) => {
                     className="flex flex-col items-center gap-4 mx-auto group outline-none cursor-pointer"
                 >
                     <span className="text-[9px] uppercase tracking-[0.4em] text-stone-400 font-bold group-hover:text-pink-500 transition-colors">
-                        Ver Sabores
+                        Em breve
                     </span>
                     <div className="p-4 rounded-full border border-stone-100 group-hover:border-pink-200 transition-all bg-white shadow-sm">
                         <ChevronDown 

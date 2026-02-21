@@ -105,8 +105,8 @@ export const Footer = () => {
             <div className="mt-24 pt-8 border-t border-stone-100/50 flex flex-col md:flex-row justify-between items-center gap-6 text-[9px] text-stone-400 uppercase tracking-widest">
                 <p>© {year} Anatilde Delícias Boutique.</p>
                 <div className="flex items-center gap-1">
-                    <span>Handcrafted by</span>
-                    <span className="text-stone-900 font-bold tracking-tighter">ANATILDE</span>
+                    <span>by</span>
+                    <span className="text-stone-900 font-bold tracking-tighter">RUANPUGA</span>
                     <span className="text-pink-500 font-black text-[12px] ml-1">.</span>
                 </div>
             </div>

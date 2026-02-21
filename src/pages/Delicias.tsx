@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useCallback } from 'react';
+import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Product } from '../@types/product';
 import { Category } from '../@types/category';
@@ -9,25 +9,26 @@ import { ProductShelf } from '../components/common/ProductShelf';
 import { Loader2 } from 'lucide-react';
 
 export const Delicias = () => {
-    // 1. Tipagem rigorosa do parâmetro de rota
     const { categorySlug } = useParams<{ categorySlug?: string }>();
     const navigate = useNavigate();
+    const isFirstRender = useRef(true);
 
     const [products, setProducts] = useState<Product[]>([]);
     const [categories, setCategories] = useState<Category[]>([]);
     const [selectedId, setSelectedId] = useState<number | null>(null);
     const [loading, setLoading] = useState(true);
 
-    // 2. Lógica centralizada de resolução de ID por Slug/ID
-    // Evita duplicação de lógica no useEffect e nos handlers
+    // 1. Memoização da busca de categoria (Referencialmente estável)
     const findCategoryInList = useCallback((list: Category[], identifier: string) => {
         return list.find(c => String(c.slug) === identifier || String(c.id) === identifier);
     }, []);
 
     useEffect(() => {
-        let isMounted = true; // Previne atualização de estado em componente desmontado
+        let isMounted = true;
 
         const loadInitialData = async () => {
+            // Se já temos dados no cache (verificado internamente nos services),
+            // o Promise.all resolve quase instantaneamente.
             try {
                 const [prods, cats] = await Promise.all([
                     productService.getAllActive(),
@@ -36,19 +37,21 @@ export const Delicias = () => {
 
                 if (!isMounted) return;
 
-                const activeCats = cats || [];
-                setProducts(prods || []);
-                setCategories(activeCats);
+                setProducts(prods);
+                setCategories(cats);
 
-                // Sincronização URL -> Estado (Staff Logic)
+                // Sincronização URL -> Estado
                 if (categorySlug) {
-                    const found = findCategoryInList(activeCats, categorySlug);
+                    const found = findCategoryInList(cats, categorySlug);
                     if (found) setSelectedId(Number(found.id));
+                } else {
+                    setSelectedId(null);
                 }
             } catch (err) {
                 console.error("Critical Load Error:", err);
             } finally {
                 if (isMounted) setLoading(false);
+                isFirstRender.current = false;
             }
         };
 
@@ -56,12 +59,13 @@ export const Delicias = () => {
         return () => { isMounted = false; };
     }, [categorySlug, findCategoryInList]);
 
-    // 3. Handler memorizado para garantir que o CircleSelector (memo) funcione de fato
+    // 2. Handler de seleção com navegação (Evita re-renders no CircleSelector)
     const handleSelectCategory = useCallback((id: number | null) => {
-        setSelectedId(id);
-        
+        if (id === selectedId) return; // Short-circuit se já estiver selecionado
+
         if (!id) {
             navigate('/delicias');
+            setSelectedId(null);
             return;
         }
 
@@ -69,10 +73,9 @@ export const Delicias = () => {
         const path = cat?.slug || cat?.id;
         
         if (path) navigate(`/delicias/${path}`);
-    }, [categories, navigate]);
+    }, [categories, navigate, selectedId]);
 
-    // 4. Performance: Otimização de filtragem
-    // Usamos Number() uma única vez para evitar casting dentro do loop de milhares de produtos
+    // 3. Filtro em memória (Ultra performático devido ao Cache do Service)
     const filteredProducts = useMemo(() => {
         if (!selectedId) return products;
         const targetId = Number(selectedId);
@@ -84,7 +87,8 @@ export const Delicias = () => {
         return categories.find(c => Number(c.id) === selectedId)?.name || "Categoria";
     }, [selectedId, categories]);
 
-    if (loading) return (
+    // 4. Loading State (Apenas no primeiro load frio)
+    if (loading && isFirstRender.current) return (
         <div className="h-screen flex items-center justify-center bg-[#FFFCFB]">
             <Loader2 className="animate-spin text-pink-400" size={32} strokeWidth={1.5} />
         </div>
@@ -92,7 +96,7 @@ export const Delicias = () => {
 
     return (
         <main className="min-h-screen bg-[#FFFCFB] pt-28 pb-20">
-            {/* O memo do CategoryCircleSelector agora é respeitado pelo useCallback */}
+            {/* O CategoryCircleSelector deve estar envolto em React.memo para performance total */}
             <CategoryCircleSelector 
                 categories={categories} 
                 selectedId={selectedId} 
@@ -103,6 +107,7 @@ export const Delicias = () => {
                 title={currentTitle}
                 subtitle="Cardápio"
                 products={filteredProducts}
+                // O limite é o total de filtrados para mostrar tudo nesta página
                 limit={filteredProducts.length} 
             />
         </main>

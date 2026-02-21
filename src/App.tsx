@@ -29,6 +29,32 @@ import { AbaSocial } from './modules/admin/views/configuracoes/AbaSocial';
 import { HelmetProvider } from 'react-helmet-async';
 import { NavigationHandler } from './components/functions/NavigationHandler';
 import { SEOManager } from './components/functions/SEOManager';
+import { useEffect } from 'react';
+import api from './services/api';
+import { useCacheStore } from './store/useCacheStore';
+
+export const useCacheSync = () => {
+    useEffect(() => {
+        const checkVersion = async () => {
+            try {
+                // Endpoint ultra-leve que lê o cache_version.txt
+                const { data } = await api.get('/get_cache_version.php');
+                const localVersion = localStorage.getItem('anatilde_cache_v');
+
+                if (localVersion && data.version !== localVersion) {
+                    useCacheStore.getState().invalidate();
+                    console.warn("🔄 Dados atualizados pelo Admin. Cache renovado.");
+                }
+                localStorage.setItem('anatilde_cache_v', data.version);
+            } catch (e) { /* silent */ }
+        };
+
+        checkVersion();
+        // Opcional: checar a cada 5 minutos
+        const interval = setInterval(checkVersion, 1000 * 60 * 5);
+        return () => clearInterval(interval);
+    }, []);
+};
 
 const SiteLayout = () => (
   <div className="min-h-screen bg-white flex flex-col">
@@ -42,6 +68,9 @@ const SiteLayout = () => (
 );
 
 function App() {
+
+  useCacheSync();
+  
   return (
     <HelmetProvider>
       <SEOManager />
