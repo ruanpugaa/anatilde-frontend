@@ -52,7 +52,7 @@ export const HeroSlider = () => {
     if (banners.length === 0) return null;
 
     return (
-        <section className="h-[90vh] w-full relative overflow-hidden hero-swiper-custom">
+        <section className="h-[70vh] w-full relative overflow-hidden hero-swiper-custom">
             <Swiper 
                 modules={[Autoplay, EffectFade, Pagination]} 
                 effect="fade"
