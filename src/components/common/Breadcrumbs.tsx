@@ -12,7 +12,6 @@ const routeLabels: Record<string, string> = {
 
 export const Breadcrumbs = () => {
     const { pathname } = useLocation();
-    // STAFF: Adicionado slug para compor a URL da categoria
     const [productContext, setProductContext] = useState<{name: string, category: string, categorySlug: string} | null>(null);
     
     useEffect(() => {
@@ -21,7 +20,7 @@ export const Breadcrumbs = () => {
                 setProductContext({
                     name: e.detail.name,
                     category: e.detail.categoryName || 'Delícias',
-                    categorySlug: e.detail.categorySlug || 'delicias' // Fallback seguro
+                    categorySlug: e.detail.categorySlug || 'delicias'
                 });
             }
         };
@@ -41,8 +40,8 @@ export const Breadcrumbs = () => {
     return (
         <div className="w-full bg-white/80 backdrop-blur-md border-b border-stone-50 sticky top-16 md:top-20 z-[35]">
             <nav aria-label="Breadcrumb" className="max-w-6xl mx-auto px-6 md:px-8 h-12 flex items-center">
-                <ol className="flex items-center text-[9px] font-black uppercase tracking-[0.2em] text-stone-400">
-                    <li className="flex items-center">
+                <ol className="flex items-center text-[9px] font-black uppercase tracking-[0.2em] text-stone-400 w-full overflow-hidden">
+                    <li className="flex items-center shrink-0">
                         <Link to="/" className="hover:text-pink-500 transition-colors flex items-center">
                             <Home size={11} strokeWidth={2.5} />
                         </Link>
@@ -55,9 +54,10 @@ export const Breadcrumbs = () => {
                                 initial={{ opacity: 0, x: 5 }}
                                 animate={{ opacity: 1, x: 0 }}
                                 exit={{ opacity: 0, x: -5 }}
-                                className="flex items-center"
+                                className="flex items-center overflow-hidden"
                             >
-                                <li className="flex items-center">
+                                {/* STAFF: Escondemos 'Delícias' no mobile para ganhar espaço inicial */}
+                                <li className="hidden md:flex items-center">
                                     <ChevronRight size={10} className="mx-1 text-stone-300" />
                                     <Link to="/delicias" className="hover:text-stone-600 transition-colors">
                                         Delícias
@@ -66,19 +66,26 @@ export const Breadcrumbs = () => {
                                 
                                 {productContext ? (
                                     <>
+                                        {/* CATEGORIA: No mobile vira "..." se o nome do produto for longo */}
                                         <li className="flex items-center">
-                                            <ChevronRight size={10} className="mx-1 text-stone-300" />
-                                            {/* STAFF: Agora com link dinâmico para a categoria */}
+                                            <ChevronRight size={10} className="mx-1 text-stone-300 shrink-0" />
+                                            
+                                            {/* Versão Desktop: Nome completo */}
                                             <Link 
                                                 to={`/delicias/${productContext.categorySlug}`} 
-                                                className="hover:text-stone-600 transition-colors"
+                                                className="hidden md:inline hover:text-stone-600 transition-colors whitespace-nowrap"
                                             >
                                                 {productContext.category}
                                             </Link>
+
+                                            {/* Versão Mobile: Omissão elegante */}
+                                            <span className="md:hidden text-stone-300 font-medium tracking-widest">...</span>
                                         </li>
-                                        <li className="flex items-center">
-                                            <ChevronRight size={10} className="mx-1 text-stone-300" />
-                                            <span className="text-pink-500 font-black truncate max-w-[120px] md:max-w-[200px]">
+
+                                        {/* PRODUTO: Sempre visível, com truncamento inteligente */}
+                                        <li className="flex items-center overflow-hidden">
+                                            <ChevronRight size={10} className="mx-1 text-stone-300 shrink-0" />
+                                            <span className="text-pink-500 font-black truncate max-w-[150px] sm:max-w-[200px] md:max-w-[400px]">
                                                 {productContext.name}
                                             </span>
                                         </li>
@@ -86,7 +93,7 @@ export const Breadcrumbs = () => {
                                 ) : (
                                     <li className="flex items-center">
                                         <ChevronRight size={10} className="mx-1 text-stone-300" />
-                                        <span className="animate-pulse text-stone-200">Carregando...</span>
+                                        <span className="animate-pulse text-stone-200 uppercase">Carregando...</span>
                                     </li>
                                 )}
                             </motion.div>
@@ -104,13 +111,13 @@ export const Breadcrumbs = () => {
 
                                     return (
                                         <li key={to} className="flex items-center">
-                                            <ChevronRight size={10} className="mx-1 text-stone-300" />
+                                            <ChevronRight size={10} className="mx-1 text-stone-300 shrink-0" />
                                             {last ? (
-                                                <span className="text-pink-500 font-black">
+                                                <span className="text-pink-500 font-black truncate max-w-[120px]">
                                                     {label}
                                                 </span>
                                             ) : (
-                                                <Link to={to} className="hover:text-stone-600 transition-colors">
+                                                <Link to={to} className="hover:text-stone-600 transition-colors hidden sm:inline">
                                                     {label}
                                                 </Link>
                                             )}
