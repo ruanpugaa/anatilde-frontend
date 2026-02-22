@@ -70,7 +70,8 @@ export const HeroSlider = () => {
                         {/* Overlay para contraste */}
                         <div className="absolute inset-0 bg-black/40 z-10" />
                         
-                        <img 
+                        <img
+                            fetchPriority="high"
                             src={slide.image_url} 
                             className="w-full h-full object-cover" 
                             alt={slide.title} 
