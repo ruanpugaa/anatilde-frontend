@@ -16,7 +16,7 @@ export const ProductCard = ({ product, index = 0 }: ProductCardProps) => {
     const addItem = useCartStore((state: any) => state.addItem);
     const { isFavorite, toggleFavorite } = useWishlist(product.id); // STAFF: Hook compartilhado
     
-    const UPLOADS_URL = 'https://anatilde.com.br/uploads/produtos/';
+    const UPLOADS_URL = 'https://api.anatilde.com.br/uploads/produtos/';
 
     const getProductImage = (url: string) => {
         if (!url) return null;

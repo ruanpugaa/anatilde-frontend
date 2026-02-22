@@ -21,17 +21,19 @@ export const ProdutosListaView = () => {
      * STAFF SANITIZER
      * Resolve o conflito de paths EN/PT e remove prefixos de API injetados pelo backend
      */
+    /**
+     * STAFF CLEANUP
+     * O backend já envia a URL completa do CDN (https://cdn.anatilde.com.br/...)
+     * Não precisamos mais de replace ou tratamento de strings no Front.
+     */
     const resolveProductImage = (path: string | null) => {
         if (!path) return 'https://placehold.co/600x400?text=Sem+Imagem';
         
-        const cleanPath = path
-            .replace('https://anatilde.com.br/api/', '')
-            .replace('https://anatilde.com.br/', '')
-            .replace('api/uploads/', 'uploads/')
-            .replace(/products\//g, 'produtos/') // Regex global para garantir a troca
-            .replace(/^\/+/, '');
+        // Se a URL já for completa (começar com http), apenas retorne-a
+        if (path.startsWith('http')) return path;
 
-        return `https://anatilde.com.br/${cleanPath}`;
+        // Fallback de segurança caso algo venha relativo
+        return `https://cdn.anatilde.com.br/${path.replace(/^\/+/, '')}`;
     };
 
     const fetchData = async () => {

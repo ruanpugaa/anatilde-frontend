@@ -19,9 +19,17 @@ export const HeroSlider = () => {
         const loadBanners = async () => {
             try {
                 const data = await bannerService.getAll();
-                // Filtramos os banners ativos. No PHP/MySQL is_active pode vir como string "1" ou number 1
                 const activeBanners = data.filter(b => Number(b.is_active) === 1);
-                setBanners(activeBanners);
+                
+                // STAFF: Normalização de URLs de imagem para o subdomínio API
+                const normalizedBanners = activeBanners.map(banner => ({
+                    ...banner,
+                    image_url: banner.image_url.startsWith('http') 
+                        ? banner.image_url 
+                        : `https://api.anatilde.com.br/${banner.image_url.replace(/^\/+/, '')}`
+                }));
+
+                setBanners(normalizedBanners);
             } catch (error) {
                 console.error("Erro ao carregar banners do Hero:", error);
             } finally {
@@ -47,7 +55,9 @@ export const HeroSlider = () => {
         <section className="h-[90vh] w-full relative overflow-hidden hero-swiper-custom">
             <Swiper 
                 modules={[Autoplay, EffectFade, Pagination]} 
-                effect="fade" 
+                effect="fade"
+                // STAFF: O crossFade é essencial para evitar o empilhamento visual
+                fadeEffect={{ crossFade: true }}
                 autoplay={{ delay: 6000, disableOnInteraction: false }} 
                 pagination={{ 
                     clickable: true,
@@ -56,8 +66,8 @@ export const HeroSlider = () => {
                 className="h-full w-full"
             >
                 {banners.map((slide) => (
-                    <SwiperSlide key={slide.id} className="relative">
-                        {/* Overlay para contraste de texto */}
+                    <SwiperSlide key={slide.id} className="relative w-full h-full overflow-hidden">
+                        {/* Overlay para contraste */}
                         <div className="absolute inset-0 bg-black/40 z-10" />
                         
                         <img 
@@ -66,11 +76,15 @@ export const HeroSlider = () => {
                             alt={slide.title} 
                         />
                         
+                        {/* STAFF: Usamos AnimatePresence ou garantimos que o motion 
+                           só dispare quando o slide estiver ativo. 
+                           O whileInView pode disparar para todos os slides de uma vez.
+                        */}
                         <div className="absolute inset-0 z-20 flex flex-col items-center justify-center text-white text-center px-4">
                             <motion.h1 
                                 initial={{ opacity: 0, y: 40 }} 
                                 whileInView={{ opacity: 1, y: 0 }}
-                                transition={{ duration: 0.8, ease: "easeOut" }}
+                                transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
                                 className="text-6xl md:text-8xl font-serif italic mb-6"
                             >
                                 {slide.title}
@@ -102,7 +116,6 @@ export const HeroSlider = () => {
                 ))}
             </Swiper>
 
-            {/* Injeção de CSS compatível com TypeScript/Vite */}
             <style dangerouslySetInnerHTML={{ __html: `
                 .hero-swiper-custom .swiper-pagination-bullet-active {
                     background: #ec4899 !important;
@@ -111,11 +124,9 @@ export const HeroSlider = () => {
                     background: #fff;
                     opacity: 0.6;
                 }
-                .hero-swiper-custom .swiper-pagination-dynamic {
-                    bottom: 40px !important;
-                }
-                .hero-swiper-custom .swiper-effect-fade .swiper-slide {
-                    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+                /* STAFF: Garante que slides inativos não fiquem visíveis por erro de CSS */
+                .hero-swiper-custom .swiper-slide:not(.swiper-slide-active) {
+                    pointer-events: none;
                 }
             `}} />
         </section>

@@ -5,7 +5,6 @@ import { useCacheStore } from '../store/useCacheStore';
  * API Service - Staff Level
  */
 const api = axios.create({
-    // O problema pode estar aqui se o app entender que TUDO abaixo de anatilde.com.br pertence à API
     baseURL: 'https://api.anatilde.com.br/',
     timeout: 15000,
 });
@@ -13,9 +12,21 @@ const api = axios.create({
 api.interceptors.request.use(
     (config) => {
         /**
-         * STAFF FIX: Impedir que o Axios anexe o baseURL em URLs que já começam 
-         * com http ou https. Isso evita comportamentos bizarros se você usar
-         * a instância da API para buscar algum asset externo.
+         * STAFF DEBUG: DESATIVAÇÃO DE CACHE VIA URL (CORS SAFE)
+         * Usamos apenas o timestamp na URL para evitar erros de CORS 
+         * com os headers 'Cache-Control' no servidor HostGator.
+         */
+        if (import.meta.env.DEV) {
+            if (config.method?.toLowerCase() === 'get') {
+                config.params = {
+                    ...config.params,
+                    _v: Date.now(), 
+                };
+            }
+        }
+
+        /**
+         * STAFF FIX: Impedir que o Axios anexe o baseURL em URLs externas.
          */
         if (config.url?.startsWith('http')) {
             config.baseURL = ''; 
@@ -45,11 +56,7 @@ api.interceptors.response.use(
         return response;
     },
     (error) => {
-        // Tratamento de erro robusto
         const message = error.response?.data?.error || error.response?.data?.message || error.message;
-        
-        // Se for 401 ou 403, você pode disparar um redirect de auth aqui no futuro
-        
         return Promise.reject({ ...error, friendlyMessage: message });
     }
 );

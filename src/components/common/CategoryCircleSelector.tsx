@@ -2,7 +2,7 @@ import { memo } from 'react';
 import { motion } from 'framer-motion';
 import { Category } from '../../@types/category';
 
-const UPLOADS_URL = 'https://anatilde.com.br/uploads/categorias/';
+const UPLOADS_URL = 'https://api.anatilde.com.br/uploads/categorias/';
 
 export const CategoryCircleSelector = memo(({ 
     categories, 

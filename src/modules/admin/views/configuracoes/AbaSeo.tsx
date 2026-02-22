@@ -1,14 +1,18 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Search, BarChart3, Image as ImageIcon, Save, Loader2, Share2, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 
+// STAFF INFRA
 import api from '../../../../services/api';
 
 export const AbaSEO = () => {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const shareImageRef = useRef<HTMLInputElement>(null);
+
+    // STAFF CONST: Fonte única de verdade para mídia
+    const CDN_URL = "https://cdn.anatilde.com.br/";
 
     const [settings, setSettings] = useState({
         seo_title: '',
@@ -21,23 +25,18 @@ export const AbaSEO = () => {
     const [file, setFile] = useState<File | null>(null);
 
     /**
-     * STAFF SANITIZER
-     * Remove prefixos de API e garante que a imagem aponte para a raiz de uploads
+     * STAFF RESOLVER: Blindagem de URL
+     * Garante que a imagem sempre aponte para o CDN, 
+     * independente de como o dado venha do banco.
      */
-    const resolveSeoImage = useCallback((path: string | null) => {
+    const resolveImageUrl = (path: string | null) => {
         if (!path) return null;
+        if (path.startsWith('blob:') || path.startsWith('http')) return path;
         
-        // Se já for um blob local (upload recém feito), não mexe
-        if (path.startsWith('blob:')) return path;
-
-        const cleanPath = path
-            .replace('https://anatilde.com.br/api/', '')
-            .replace('https://anatilde.com.br/', '')
-            .replace('api/uploads/', 'uploads/')
-            .replace(/^\/+/, '');
-
-        return `https://anatilde.com.br/${cleanPath}`;
-    }, []);
+        // Remove barras iniciais e concatena com o CDN_URL definido
+        const cleanPath = path.replace(/^\/+/, '');
+        return `${CDN_URL}${cleanPath}`;
+    };
 
     useEffect(() => {
         const loadSEO = async () => {
@@ -52,8 +51,9 @@ export const AbaSEO = () => {
                     analytics_id: data.analytics_id || ''
                 });
 
-                if (data.seo_share_image) {
-                    setPreview(resolveSeoImage(data.seo_share_image));
+                // STAFF: Aplicando o resolver na carga inicial
+                if (data.seo_share_ima) {
+                    setPreview(resolveImageUrl(data.seo_share_ima));
                 }
             } catch (err) {
                 toast.error("Erro na hidratação dos dados de SEO.");
@@ -62,7 +62,7 @@ export const AbaSEO = () => {
             }
         };
         loadSEO();
-    }, [resolveSeoImage]);
+    }, []);
 
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -81,13 +81,30 @@ export const AbaSEO = () => {
             const res = await api.post('/modules/settings/update.php', formData);
             if (res.data.success) {
                 toast.success("Otimização de SEO atualizada!", { id: tid });
-                // Dispara evento para outros componentes que usem settings
+                
+                // STAFF: Sincronização de preview pós-upload usando o resolver
+                if (res.data.paths && res.data.paths.seo_share_ima) {
+                    setPreview(resolveImageUrl(res.data.paths.seo_share_ima));
+                }
+                
+                setFile(null);
                 window.dispatchEvent(new Event('settingsUpdated'));
             }
         } catch (err: any) {
-            toast.error(err.friendlyMessage || "Erro ao persistir SEO", { id: tid });
+            toast.error("Erro ao persistir SEO", { id: tid });
         } finally {
             setSaving(false);
+        }
+    };
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const f = e.target.files?.[0];
+        if (f) {
+            if (preview?.startsWith('blob:')) {
+                URL.revokeObjectURL(preview);
+            }
+            setFile(f);
+            setPreview(URL.createObjectURL(f));
         }
     };
 
@@ -100,12 +117,8 @@ export const AbaSEO = () => {
 
     return (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-8 pb-10">
-            
-        
-
             <form onSubmit={handleSave} className="bg-white p-8 rounded-[3rem] border border-stone-100 space-y-8 shadow-sm">
                 
-                {/* Media Section */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
                     <div className="space-y-4">
                         <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 block ml-1">Social Share Image (Open Graph)</label>
@@ -118,54 +131,41 @@ export const AbaSEO = () => {
                                     src={preview} 
                                     className="w-full h-full object-cover shadow-inner" 
                                     alt="SEO Preview"
-                                    onError={(e) => {
-                                        const target = e.target as HTMLImageElement;
-                                        if (!target.src.includes('placehold.co')) {
-                                            target.src = 'https://placehold.co/600x400?text=Erro+na+Imagem+SEO';
-                                        }
-                                    }}
                                 />
                             ) : (
                                 <div className="text-center">
                                     <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center mx-auto mb-3 text-stone-300 shadow-sm">
                                         <Share2 size={24} />
                                     </div>
-                                    <p className="text-[10px] font-black text-stone-400 uppercase tracking-tighter text-stone-400">Upload OG Image</p>
+                                    <p className="text-[10px] font-black text-stone-400 uppercase tracking-tighter">Upload OG Image</p>
                                 </div>
                             )}
                             <div className="absolute inset-0 bg-stone-900/60 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center transition-all duration-300 backdrop-blur-sm">
                                 <ImageIcon size={28} className="text-white mb-2" />
-                                <span className="text-[10px] text-white font-black uppercase tracking-[0.2em]">Substituir</span>
+                                <span className="text-[10px] text-white font-black uppercase tracking-[0.2em]">Substituir Imagem</span>
                             </div>
                         </div>
-                        <input type="file" ref={shareImageRef} className="hidden" accept="image/*" onChange={(e) => {
-                            const f = e.target.files?.[0];
-                            if (f) { 
-                                setFile(f); 
-                                setPreview(URL.createObjectURL(f)); 
-                            }
-                        }} />
+                        <input type="file" ref={shareImageRef} className="hidden" accept="image/*" onChange={handleFileChange} />
                     </div>
                     
                     <div className="bg-stone-50 p-6 rounded-[2rem] border border-stone-100 mt-8">
                         <p className="text-[10px] font-black text-stone-400 uppercase tracking-widest mb-3">Checklist Staff:</p>
                         <ul className="text-[11px] text-stone-500 space-y-2 font-medium">
                             <li className="flex items-center gap-2"><div className="w-1 h-1 bg-pink-500 rounded-full" /> Dimensão recomendada: 1200x630px.</li>
-                            <li className="flex items-center gap-2"><div className="w-1 h-1 bg-pink-500 rounded-full" /> Título ideal: entre 50 e 60 caracteres.</li>
+                            <li className="flex items-center gap-2"><div className="w-1 h-1 bg-pink-500 rounded-full" /> Otimização WebP aplicada no CDN.</li>
                             <li className="flex items-center gap-2"><div className="w-1 h-1 bg-pink-500 rounded-full" /> Descrição ideal: até 160 caracteres.</li>
                         </ul>
                     </div>
                 </div>
 
-                {/* Form Fields */}
                 <div className="space-y-6">
                     <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 ml-1">Meta Title (H1 de Busca)</label>
+                        <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 ml-1">Meta Title</label>
                         <input 
                             type="text" value={settings.seo_title} 
                             onChange={e => setSettings({...settings, seo_title: e.target.value})} 
                             className="w-full bg-stone-50 border-none rounded-2xl py-4 px-6 text-sm font-bold text-stone-800 focus:ring-2 focus:ring-pink-100 outline-none transition-all" 
-                            placeholder="Ex: Anatilde | Confeitaria Artesanal e Presentes"
+                            placeholder="Ana Tilde | Confeitaria Artesanal"
                         />
                     </div>
 
@@ -175,31 +175,24 @@ export const AbaSEO = () => {
                             value={settings.seo_description} 
                             onChange={e => setSettings({...settings, seo_description: e.target.value})} 
                             className="w-full bg-stone-50 border-none rounded-2xl py-4 px-6 text-sm font-medium text-stone-600 focus:ring-2 focus:ring-pink-100 outline-none transition-all h-28 resize-none" 
-                            placeholder="Descreva seu negócio para o Google..."
                         />
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-2">
-                            <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 ml-1 flex items-center gap-2">
-                                <BarChart3 size={12} className="text-pink-500" /> Analytics Measurement ID
-                            </label>
+                            <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 ml-1">Analytics ID</label>
                             <input 
                                 type="text" value={settings.analytics_id} 
                                 onChange={e => setSettings({...settings, analytics_id: e.target.value})} 
                                 className="w-full bg-stone-50 border-none rounded-2xl py-4 px-6 text-sm font-mono text-pink-600 focus:ring-2 focus:ring-pink-100 outline-none" 
-                                placeholder="G-XXXXXXXXXX" 
                             />
                         </div>
                         <div className="space-y-2">
-                            <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 ml-1 flex items-center gap-2">
-                                <Search size={12} className="text-pink-500" /> Keywords (LSI)
-                            </label>
+                            <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 ml-1">Keywords</label>
                             <input 
                                 type="text" value={settings.seo_keywords} 
                                 onChange={e => setSettings({...settings, seo_keywords: e.target.value})} 
                                 className="w-full bg-stone-50 border-none rounded-2xl py-4 px-6 text-sm font-medium text-stone-800 focus:ring-2 focus:ring-pink-100 outline-none" 
-                                placeholder="doces, bauru, gourmet, presentes"
                             />
                         </div>
                     </div>
@@ -214,24 +207,6 @@ export const AbaSEO = () => {
                     </button>
                 </div>
             </form>
-
-             {/* Google Search Simulator */}
-            <div className="bg-white p-8 rounded-[2.5rem] border border-stone-100 shadow-sm space-y-4">
-                <h3 className="text-xs font-black text-stone-400 uppercase tracking-widest flex items-center gap-2">
-                    <Eye size={14} className="text-pink-500" /> Preview no Google
-                </h3>
-                <div className="bg-stone-50 p-6 rounded-2xl border border-stone-100 max-w-2xl">
-                    <p className="text-[#1a0dab] text-xl font-medium hover:underline cursor-default truncate">
-                        {settings.seo_title || "Título da Página | Ana Tilde Confeitaria"}
-                    </p>
-                    <p className="text-[#006621] text-sm mt-1 mb-2 truncate">
-                        https://anatilde.com.br
-                    </p>
-                    <p className="text-[#545454] text-sm leading-relaxed line-clamp-2">
-                        {settings.seo_description || "Aqui aparece a descrição do seu site nos resultados de busca do Google..."}
-                    </p>
-                </div>
-            </div>
         </motion.div>
     );
 };

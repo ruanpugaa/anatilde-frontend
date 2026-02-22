@@ -3,6 +3,11 @@ import { Toaster } from 'sonner';
 import { HelmetProvider } from 'react-helmet-async';
 import { useEffect } from 'react';
 
+// Context & State
+import { SettingsProvider } from './context/SettingsContext';
+import { useCacheStore } from './store/useCacheStore';
+import api from './services/api';
+
 // Layout & Components
 import { Header } from './components/layout/Header';
 import { Sidebar } from './components/layout/Sidebar'; 
@@ -10,7 +15,7 @@ import { WishlistSidebar } from './components/layout/WishlistSidebar';
 import { Footer } from './components/layout/Footer';
 import { NavigationHandler } from './components/functions/NavigationHandler';
 import { SEOManager } from './components/functions/SEOManager';
-import { Breadcrumbs } from './components/common/Breadcrumbs'; // Importado aqui
+import { Breadcrumbs } from './components/common/Breadcrumbs';
 
 // Pages & Views Públicas
 import { Home } from './pages/Home';
@@ -39,11 +44,11 @@ import { AbaSEO } from './modules/admin/views/configuracoes/AbaSeo';
 import { AbaContato } from './modules/admin/views/configuracoes/AbaContato';
 import { AbaSocial } from './modules/admin/views/configuracoes/AbaSocial';
 
-// Services & Store
-import api from './services/api';
-import { useCacheStore } from './store/useCacheStore';
-
-export const useCacheSync = () => {
+/**
+ * STAFF CACHE SYNC: 
+ * Sincroniza a versão do cache com o servidor para garantir invalidadores de assets.
+ */
+const useCacheSync = () => {
     const setVersion = useCacheStore(state => state.setVersion);
     useEffect(() => {
         const syncVersion = async () => {
@@ -61,8 +66,8 @@ export const useCacheSync = () => {
 };
 
 /**
- * STAFF: Layout Principal do Site
- * O Breadcrumbs foi inserido aqui para aparecer apenas no site público.
+ * STAFF SITE LAYOUT:
+ * Estrutura do frontend com compensação de scroll para o Header fixo.
  */
 const SiteLayout = () => (
   <div className="min-h-screen bg-white flex flex-col">
@@ -70,9 +75,6 @@ const SiteLayout = () => (
     <Sidebar /> 
     <WishlistSidebar /> 
     
-    {/* STAFF: Adicionamos um container de compensação.
-      O 'pt-20' ou 'pt-24' deve ser a altura exata do seu Header fixo.
-    */}
     <div className="pt-20 md:pt-28"> 
         <Breadcrumbs /> 
     </div>
@@ -89,57 +91,64 @@ function App() {
   
   return (
     <HelmetProvider>
-      <SEOManager />
-      <BrowserRouter>
-        <NavigationHandler />
-        <Toaster 
-          position="top-right" 
-          richColors 
-          closeButton 
-          toastOptions={{
-            style: { borderRadius: '1rem', border: '1px solid #f5f5f4' },
-          }}
-        />
+      {/* STAFF ARCHITECTURE: 
+          SettingsProvider encapsula a árvore para que o SEOManager e todos os 
+          componentes abaixo consumam a mesma requisição via Contexto.
+      */}
+      <SettingsProvider>
+        <SEOManager />
+        <BrowserRouter>
+          <NavigationHandler />
+          <Toaster 
+            position="top-right" 
+            richColors 
+            closeButton 
+            toastOptions={{
+              style: { borderRadius: '1rem', border: '1px solid #f5f5f4' },
+            }}
+          />
 
-        <Routes>
-          {/* SITE PÚBLICO - O Breadcrumbs está encapsulado no SiteLayout */}
-          <Route element={<SiteLayout />}>
-            <Route path="/" element={<Home />} />
-            <Route path="/homenova" element={<HomeNova />} />
-            <Route path="/delicias" element={<Delicias />} />
-            <Route path="/delicias/:categorySlug?" element={<Delicias />} />
-            <Route path="/produto/:id" element={<Produto />} />
-            <Route path="/pascoa" element={<Pascoa />} />
-            <Route path="/quem-somos" element={<QuemSomos />} /> 
-            <Route path="/contato" element={<Contato />} />
-          </Route>
-
-          {/* PAINEL ADMINISTRATIVO - Sem Breadcrumbs do site (evita conflito visual) */}
-          <Route path="/admin" element={<Admin />}>
-            <Route index element={<Navigate to="/admin/dashboard" replace />} />
-            <Route path="dashboard" element={<div className="p-8 bg-white rounded-3xl font-bold text-slate-400 italic">Dashboard em breve...</div>} />
-            <Route path="pedidos" element={<PedidosView />} />
-            <Route path="newsletter" element={<NewsletterView/>} />
-            <Route path="banners" element={<BannersView />} />
-            <Route path="banners/add" element={<BannersFormView />} />
-            <Route path="banners/edit/:id" element={<BannersFormView />} />
-            <Route path="categorias" element={<CategoriasView />} />
-            <Route path="produtos" element={<ProdutosListaView />} />
-            <Route path="produtos/add" element={<ProdutosAddView />} /> 
-            <Route path="produtos/edit/:id" element={<ProdutosEditView />} />
-
-            <Route path="configuracoes" element={<ConfiguracoesLayout />}>
-              <Route index element={<Navigate to="geral" replace />} />
-              <Route path="geral" element={<AbaGeral />} />
-              <Route path="seo" element={<AbaSEO />} />
-              <Route path="contato" element={<AbaContato />} />
-              <Route path="social" element={<AbaSocial />} />
+          <Routes>
+            {/* ROTAS PÚBLICAS */}
+            <Route element={<SiteLayout />}>
+              <Route path="/" element={<Home />} />
+              <Route path="/homenova" element={<HomeNova />} />
+              <Route path="/delicias" element={<Delicias />} />
+              <Route path="/delicias/:categorySlug?" element={<Delicias />} />
+              <Route path="/produto/:id" element={<Produto />} />
+              <Route path="/pascoa" element={<Pascoa />} />
+              <Route path="/quem-somos" element={<QuemSomos />} /> 
+              <Route path="/contato" element={<Contato />} />
             </Route>
-          </Route>
 
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </BrowserRouter>
+            {/* PAINEL ADMIN */}
+            <Route path="/admin" element={<Admin />}>
+              <Route index element={<Navigate to="/admin/dashboard" replace />} />
+              <Route path="dashboard" element={<div className="p-8 bg-white rounded-3xl font-bold text-slate-400 italic">Dashboard em breve...</div>} />
+              <Route path="pedidos" element={<PedidosView />} />
+              <Route path="newsletter" element={<NewsletterView/>} />
+              <Route path="banners" element={<BannersView />} />
+              <Route path="banners/add" element={<BannersFormView />} />
+              <Route path="banners/edit/:id" element={<BannersFormView />} />
+              <Route path="categorias" element={<CategoriasView />} />
+              <Route path="produtos" element={<ProdutosListaView />} />
+              <Route path="produtos/add" element={<ProdutosAddView />} /> 
+              <Route path="produtos/edit/:id" element={<ProdutosEditView />} />
+
+              <Route path="configuracoes" element={<ConfiguracoesLayout />}>
+                <Route index element={<Navigate to="geral" replace />} />
+                <Route path="geral" element={<AbaGeral />} />
+                <Route path="seo" element={<AbaSEO />} />
+                <Route path="contato" element={<AbaContato />} />
+                <Route path="social" element={<AbaSocial />} />
+              </Route>
+            </Route>
+
+            {/* FALLBACK */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </BrowserRouter>
+      </SettingsProvider>
     </HelmetProvider>
   );
 }

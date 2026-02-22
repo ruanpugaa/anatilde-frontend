@@ -11,16 +11,18 @@ export const Footer = () => {
     const { settings, loading } = useSettings();
 
     // STAFF SANITIZER: Garantindo que o logo apareça sem o prefixo /api
+    // STAFF SANITIZER: Lógica de URL absoluta vs relativa
     const logoUrl = useMemo(() => {
         const path = (settings as any)?.site_logo;
         if (!path) return null;
 
-        const cleanPath = path
-            .replace('https://anatilde.com.br/api/', '')
-            .replace('https://anatilde.com.br/', '')
-            .replace('api/uploads/', 'uploads/')
-            .replace(/^\/+/, '');
+        // Se o path já for uma URL completa (ex: vem do CDN), retornamos ela
+        if (path.startsWith('http')) {
+            return path;
+        }
 
+        // Se for um path relativo, limpamos barras extras e prefixamos com o domínio principal
+        const cleanPath = path.replace(/^\/+/, '');
         return `https://anatilde.com.br/${cleanPath}`;
     }, [settings]);
 
@@ -60,7 +62,7 @@ export const Footer = () => {
                                 key={logoUrl} 
                                 src={logoUrl} 
                                 alt="Anatilde" 
-                                className="mx-auto hover:grayscale-0 transition-all duration-500" 
+                                className="h-10 md:h-12 w-auto object-contain" 
                             />
                         ) : (
                             <span className="font-serif text-3xl tracking-tighter text-stone-800">

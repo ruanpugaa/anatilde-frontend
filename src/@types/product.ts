@@ -7,6 +7,7 @@ export interface Product {
     image_url: string;
     category_id: number | string | null; // Adicionado/Corrigido
     category_name?: string;
+    category_slug?: string;
     extra_info?: string; // Retornado pelo JOIN no PHP
     active: number | boolean;
     slug?: string;

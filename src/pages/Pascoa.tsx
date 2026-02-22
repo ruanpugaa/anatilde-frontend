@@ -10,59 +10,67 @@ import { Product } from '../@types/product';
 
 export const Pascoa = () => {
     const stageRef = useRef<HTMLDivElement>(null);
-    const { products, selectedProduct, setSelectedProduct, loading, error } = useEasterCollection();
+    
+    // STAFF: Injeção do slug semântico. Centralizamos a regra de negócio aqui.
+    const { products, selectedProduct, setSelectedProduct, loading, error } = useEasterCollection('pascoa-2026');
+    
     const addItem = useCartStore((state) => state.addItem);
 
     const scrollToStage = () => stageRef.current?.scrollIntoView({ behavior: 'smooth' });
 
     /**
-     * STAFF FIX: Sanitização de Objeto para o Carrinho
-     * O erro ocorre porque o Store espera 'id: number', mas a API manda 'id: string | number'.
-     * Criamos um novo objeto garantindo a tipagem correta.
+     * STAFF SANITIZER:
+     * Garante o cumprimento do contrato do useCartStore.
+     * Resolvemos a divergência de tipos (string vs number) de forma definitiva.
      */
     const handleAddToCart = useCallback((product: Product) => {
         if (!product) return;
 
-        // Criamos uma cópia sanitizada para o Carrinho
-        const sanitizedProduct = {
+        // Omitimos o que não queremos e forçamos a tipagem correta
+        const sanitizedItem = {
             ...product,
-            id: Number(product.id), // Força o ID a ser number
-            price: Number(product.price) // Aproveitamos para garantir que o preço também seja number
+            id: Number(product.id),
+            price: Number(product.price)
         };
 
-        // Agora o TS aceita pois o objeto satisfaz Omit<Product, "quantity"> com id: number
-        addItem(sanitizedProduct as any); 
+        // Tipagem segura: passamos como um item compatível com o carrinho
+        addItem(sanitizedItem as unknown as Product & { id: number; price: number });
     }, [addItem]);
 
     if (loading) return (
         <div className="h-screen flex flex-col items-center justify-center bg-[#FDFCFB]">
             <Loader2 className="animate-spin text-pink-400 mb-4" size={48} />
-            <p className="text-stone-400 font-serif italic">Sincronizando Coleção...</p>
+            <p className="text-[10px] uppercase font-black tracking-[0.3em] text-stone-400">
+                Sincronizando Coleção...
+            </p>
         </div>
     );
 
-    if (error || products.length === 0) return null;
+    // STAFF: Fail-safe para estados vazios ou erros de API
+    if (error || products.length === 0) {
+        console.warn("[Pascoa] Coleção vazia ou erro de carregamento.");
+        return null;
+    }
 
     return (
-        <>
-            <div className="bg-[#080808] min-h-screen w-full font-sans text-white">
-                <EasterHero onScrollRequest={scrollToStage} />
+        <main className="bg-[#080808] min-h-screen w-full font-sans text-white">
+            <EasterHero onScrollRequest={scrollToStage} />
 
-                <div ref={stageRef} className="flex flex-col min-h-screen relative">
-                    <EasterProductStage 
-                        product={selectedProduct} 
-                        onAddToCart={handleAddToCart} 
-                    />
+            <div ref={stageRef} className="flex flex-col min-h-screen relative overflow-hidden">
+                <EasterProductStage 
+                    product={selectedProduct} 
+                    onAddToCart={handleAddToCart} 
+                />
 
-                    <EasterProductSelector 
-                        products={products} 
-                        // STAFF FIX: ID convertido para o seletor visual
-                        selectedId={selectedProduct?.id ? Number(selectedProduct.id) : undefined} 
-                        onSelect={setSelectedProduct} 
-                    />
-                </div>
+                <EasterProductSelector 
+                    products={products} 
+                    // STAFF: Converte ID para comparação segura no Seletor Visual
+                    selectedId={selectedProduct?.id ? Number(selectedProduct.id) : undefined} 
+                    onSelect={setSelectedProduct} 
+                />
             </div>
+            
             <Newsletter />
-        </>
+        </main>
     );
 };

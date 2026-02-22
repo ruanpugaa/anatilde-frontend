@@ -2,7 +2,12 @@ import { useState, useEffect, useCallback } from 'react';
 import { Product } from '../@types/product';
 import { productService } from '../services/productService';
 
-export const useEasterCollection = () => {
+/**
+ * STAFF ARCHITECTURE:
+ * O hook agora aceita um slug, tornando-o agnóstico à categoria.
+ * Default definido como 'pascoa-2026'.
+ */
+export const useEasterCollection = (slug = 'pascoa-2026') => {
     const [products, setProducts] = useState<Product[]>([]);
     const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
     const [loading, setLoading] = useState<boolean>(true);
@@ -13,22 +18,35 @@ export const useEasterCollection = () => {
             setLoading(true);
             setError(false);
             
-            // Consumindo o service com o filtro que preparamos
-            const data = await productService.getAllActive({ category_id: 7 });
+            /**
+             * STAFF FILTERING:
+             * Buscamos os produtos ativos e filtramos pelo slug da categoria.
+             * Isso evita hard-coded IDs que quebram entre ambientes (dev/prod).
+             */
+            const allProducts = await productService.getAllActive();
             
-            setProducts(data);
+            // Filtro por slug (case-insensitive para segurança)
+            const collection = allProducts.filter(p => 
+                p.category_slug?.toLowerCase() === slug.toLowerCase()
+            );
             
-            // Define o primeiro produto como selecionado por padrão
-            if (data.length > 0) {
-                setSelectedProduct(data[0]);
+            setProducts(collection);
+            
+            // Memoização do estado inicial: mantém o produto já selecionado 
+            // ou reseta para o primeiro da nova lista
+            if (collection.length > 0) {
+                setSelectedProduct(prev => {
+                    const exists = collection.find(p => p.id === prev?.id);
+                    return exists || collection[0];
+                });
             }
         } catch (err) {
-            console.error("[useEasterCollection] Error:", err);
+            console.error(`[useEasterCollection] Failure loading slug: ${slug}`, err);
             setError(true);
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [slug]);
 
     useEffect(() => {
         loadCollection();
