@@ -51,7 +51,7 @@ export const Contato = () => {
         if (isSubmitting) return;
 
         const promise = async () => {
-            const response = await fetch('https://anatilde.com.br/api/modules/forms/process_contact.php', {
+            const response = await fetch('https://api.anatilde.com.br/modules/forms/process_contact.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(formData)
